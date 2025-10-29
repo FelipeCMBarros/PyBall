@@ -94,20 +94,21 @@ class Gol(pygame.sprite.Sprite):
 
 # -------------------- SLIDER --------------------
 class Slider:
-    def __init__(self, x, y, width, height, speed=200, color=(0, 0, 255)):
+    def __init__(self, x, y, width, height,  speed_range=(150, 300), color=(0, 0, 255)):
         self.rect = pygame.Rect(x, y, width, height)
-        self.indicador_pos = x
-        self.speed = speed
-        self.direction = 1
+        self.indicador_pos = random.uniform(self.rect.left, self.rect.right) # Coloca o pontinho num lugar aleatorio
+        self.speed = random.uniform(*speed_range) # Randomiza uma velocidade qualquer para o pontinho 
+        self.direction = self.direction = random.choice([-1, 1]) # 1 -> Direita e -1-> Esquerda
         self.color = color
         self.active = True
-        self.value = None  # valor travado (0.0 a 1.0)
+        self.value = None  # valor travado de 0 a 1
 
     def update(self, dt):
         # Atualiza o movimento do indicador se o slider ainda estiver ativo.
         if not self.active:
             return
         self.indicador_pos += self.speed * self.direction * dt
+        
         if self.indicador_pos <= self.rect.left or self.indicador_pos >= self.rect.right:
             self.direction *= -1  # inverte o movimento nas bordas
 
