@@ -25,7 +25,7 @@ pygame.display.set_caption("PyBall")
 
 # Definição das classes dos principais objetos
 
-# -------------------- PLAYER --------------------
+# Classe do JGADOR 
 class Jogador(pygame.sprite.Sprite):
     def __init__(self, pos):
         super().__init__()
@@ -43,7 +43,7 @@ class Jogador(pygame.sprite.Sprite):
     def update(self):
         pass
 
-# -------------------- BOLA --------------------
+# Classe da BOLA 
 class Bola(pygame.sprite.Sprite):
     def __init__(self, pos_inicial, destino, forca):
         super().__init__()
@@ -65,7 +65,7 @@ class Bola(pygame.sprite.Sprite):
         if self.pos.y < 50:
             self.kill()
 
-# -------------------- GOLEIRO --------------------
+# Classe do GOLEIRO 
 class Goleiro(pygame.sprite.Sprite):
     def __init__(self, pos):
         super().__init__()
@@ -84,7 +84,7 @@ class Goleiro(pygame.sprite.Sprite):
     def update(self):
         self.mover()
 
-# -------------------- GOL --------------------
+# Classe do GOL 
 class Gol(pygame.sprite.Sprite):
     def __init__(self, pos, largura, altura):
         super().__init__()
@@ -92,7 +92,7 @@ class Gol(pygame.sprite.Sprite):
         self.image.fill((255, 255, 255))
         self.rect = self.image.get_rect(center=pos)
 
-# -------------------- SLIDER --------------------
+# Classe de um SLIDER 
 class Slider:
     def __init__(self, x, y, width, height,  speed_range=(150, 300), color=(0, 0, 255)):
         self.rect = pygame.Rect(x, y, width, height)
@@ -108,7 +108,7 @@ class Slider:
         if not self.active:
             return
         self.indicador_pos += self.speed * self.direction * dt
-        
+
         if self.indicador_pos <= self.rect.left or self.indicador_pos >= self.rect.right:
             self.direction *= -1  # inverte o movimento nas bordas
 
@@ -160,8 +160,8 @@ while running:
     for s in sliders:
         s.update(dt)
 
-    # desenha na tela
-    displaysurface.fill((0, 100, 0))
+    # poe essa porra na tela
+    displaysurface.fill((0, 0, 0))
     for s in sliders:
         s.draw(displaysurface)
     pygame.display.update()
