@@ -91,3 +91,41 @@ class Gol(pygame.sprite.Sprite):
         self.image = pygame.Surface((largura, altura))
         self.image.fill((255, 255, 255))
         self.rect = self.image.get_rect(center=pos)
+
+# -------------------- SLIDER --------------------
+class Slider:
+    def __init__(self, x, y, width, height, speed=200, color=(0, 0, 255)):
+        self.rect = pygame.Rect(x, y, width, height)
+        self.indicador_pos = x
+        self.speed = speed
+        self.direction = 1
+        self.color = color
+        self.active = True
+        self.value = None  # valor travado (0.0 a 1.0)
+
+    def update(self, dt):
+        # Atualiza o movimento do indicador se o slider ainda estiver ativo.
+        if not self.active:
+            return
+        self.indicador_pos += self.speed * self.direction * dt
+        if self.indicador_pos <= self.rect.left or self.indicador_pos >= self.rect.right:
+            self.direction *= -1  # inverte o movimento nas bordas
+
+    def lock_value(self):
+        # Trava o valor atual do slider
+        rel_pos = (self.indicador_pos - self.rect.left) / self.rect.width
+        self.value = max(0.0, min(1.0, rel_pos))
+        self.active = False
+
+    def draw(self, surface):
+        # Desenha a barra e o indicador
+        pygame.draw.rect(surface, (180, 180, 180), self.rect, border_radius=5)
+        pygame.draw.rect(surface, self.color, self.rect, 3, border_radius=5)
+        indicador_x = int(self.indicador_pos)
+        indicador_y = self.rect.centery
+        pygame.draw.circle(surface, (255, 255, 255), (indicador_x, indicador_y), self.rect.height // 2)
+
+        # Mostra valor se estiver travado
+        if self.value is not None:
+            val_text = small_font.render(f"{self.value:.2f}", True, (255, 255, 255))
+            surface.blit(val_text, (self.rect.x + self.rect.width + 15, self.rect.y))
