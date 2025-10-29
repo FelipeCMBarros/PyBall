@@ -129,3 +129,38 @@ class Slider:
         if self.value is not None:
             val_text = small_font.render(f"{self.value:.2f}", True, (255, 255, 255))
             surface.blit(val_text, (self.rect.x + self.rect.width + 15, self.rect.y))
+
+# sliders de teste
+slider_x = Slider(30, 450, 200, 20, color=(255, 0, 0))   # posição horizontal
+slider_y = Slider(30, 500, 200, 20, color=(0, 255, 0))   # altura
+slider_force = Slider(30, 550, 200, 20, color=(0, 0, 255))  # força
+
+sliders = [slider_x, slider_y, slider_force]
+current_slider = 0
+
+running = True
+while running:
+    dt = FramePerSec.tick(FPS) / 1000  # delta time em segundos
+
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            pygame.quit()
+            sys.exit()
+        elif event.type == KEYDOWN:
+            if event.key == K_SPACE:
+                # trava o slider atual
+                sliders[current_slider].lock_value()
+                current_slider += 1
+                if current_slider >= len(sliders):
+                    print("Valores finais:", [s.value for s in sliders])
+                    running = False  # sai do teste
+
+    # atualiza sliders
+    for s in sliders:
+        s.update(dt)
+
+    # desenha na tela
+    displaysurface.fill((0, 100, 0))
+    for s in sliders:
+        s.draw(displaysurface)
+    pygame.display.update()
