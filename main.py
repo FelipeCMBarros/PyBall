@@ -22,3 +22,72 @@ small_font = pygame.font.SysFont(None, 32)
 
 displaysurface = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("PyBall")
+
+# Definição das classes dos principais objetos
+
+# -------------------- PLAYER --------------------
+class Jogador(pygame.sprite.Sprite):
+    def __init__(self, pos):
+        super().__init__()
+        self.image = pygame.Surface((40, 80))
+        self.image.fill((255, 255, 255))
+        self.rect = self.image.get_rect(center=pos)
+        self.chutando = False
+
+    def chutar(self, forca, destino):
+        self.chutando = True
+        # O destino será uma tupla (x, y) no gol
+        # A força será traduzida para velocidade da bola
+        return Bola(self.rect.center, destino, forca)
+
+    def update(self):
+        pass
+
+# -------------------- BOLA --------------------
+class Bola(pygame.sprite.Sprite):
+    def __init__(self, pos_inicial, destino, forca):
+        super().__init__()
+        self.image = pygame.Surface((20, 20), pygame.SRCALPHA)
+        pygame.draw.circle(self.image, (255, 255, 255), (10, 10), 10)
+        self.rect = self.image.get_rect(center=pos_inicial)
+
+        # Vetores de movimento
+        self.pos = vec(pos_inicial)
+        self.destino = vec(destino)
+        direcao = (self.destino - self.pos).normalize()
+        self.velocidade = direcao * forca
+
+    def update(self):
+        self.pos += self.velocidade
+        self.rect.center = self.pos
+
+        # Verifica se passou do gol (simples, depois refinamos)
+        if self.pos.y < 50:
+            self.kill()
+
+# -------------------- GOLEIRO --------------------
+class Goleiro(pygame.sprite.Sprite):
+    def __init__(self, pos):
+        super().__init__()
+        self.image = pygame.Surface((60, 80))
+        self.image.fill((255, 165, 0))
+        self.rect = self.image.get_rect(center=pos)
+        self.direcao = 1
+        self.vel = 3
+
+    def mover(self):
+        # Movimento lateral simples de vai-e-volta
+        self.rect.x += self.vel * self.direcao
+        if self.rect.left < 250 or self.rect.right > 550:
+            self.direcao *= -1
+
+    def update(self):
+        self.mover()
+
+# -------------------- GOL --------------------
+class Gol(pygame.sprite.Sprite):
+    def __init__(self, pos, largura, altura):
+        super().__init__()
+        self.image = pygame.Surface((largura, altura))
+        self.image.fill((255, 255, 255))
+        self.rect = self.image.get_rect(center=pos)
