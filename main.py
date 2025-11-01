@@ -104,13 +104,21 @@ class Slider:
         self.value = None  # valor travado de 0 a 1
 
     def update(self, dt):
-        # Atualiza o movimento do indicador se o slider ainda estiver ativo.
         if not self.active:
             return
+
+        # Atualiza a posição
         self.indicador_pos += self.speed * self.direction * dt
 
-        if self.indicador_pos <= self.rect.left or self.indicador_pos >= self.rect.right:
-            self.direction *= -1  # inverte o movimento nas bordas
+        # Verifica ultrapassagem e reflete suavemente
+        if self.indicador_pos < self.rect.left:
+            excesso = self.rect.left - self.indicador_pos
+            self.indicador_pos = self.rect.left + excesso
+            self.direction *= -1
+        elif self.indicador_pos > self.rect.right:
+            excesso = self.indicador_pos - self.rect.right
+            self.indicador_pos = self.rect.right - excesso
+            self.direction *= -1
 
     def lock_value(self):
         # Trava o valor atual do slider
@@ -132,36 +140,53 @@ class Slider:
             surface.blit(val_text, (self.rect.x + self.rect.width + 15, self.rect.y))
 
 # sliders de teste
-slider_x = Slider(30, 450, 200, 20, color=(255, 0, 0))   # posição horizontal
-slider_y = Slider(30, 500, 200, 20, color=(0, 255, 0))   # altura
-slider_force = Slider(30, 550, 200, 20, color=(0, 0, 255))  # força
+slider_x = Slider(45, 450, 200, 20, color=(255, 0, 0))   # posição horizontal
+slider_y = Slider(45, 500, 200, 20, color=(0, 255, 0))   # altura
+slider_force = Slider(45, 550, 200, 20, color=(0, 0, 255))  # força
 
 sliders = [slider_x, slider_y, slider_force]
+slider_labels = ["POSIÇÃO", "ALTURA", "FORÇA"]
 current_slider = 0
 
 running = True
 while running:
-    dt = FramePerSec.tick(FPS) / 1000  # delta time em segundos
+    dt = FramePerSec.tick(FPS) / 1000
 
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
             sys.exit()
-        elif event.type == KEYDOWN:
-            if event.key == K_SPACE:
-                # trava o slider atual
-                sliders[current_slider].lock_value()
-                current_slider += 1
-                if current_slider >= len(sliders):
-                    print("Valores finais:", [s.value for s in sliders])
-                    running = False  # sai do teste
+        elif event.type == KEYDOWN and event.key == K_SPACE:
+            # trava o slider atual
+            sliders[current_slider].lock_value()
+            current_slider += 1
+            if current_slider >= len(sliders):
+                # todos travados
+                valores = [s.value for s in sliders]
+                print(f"VALORES FINAIS: posição={valores[0]:.2f}, altura={valores[1]:.2f}, força={valores[2]:.2f}")
+                running = False
 
-    # atualiza sliders
-    for s in sliders:
-        s.update(dt)
+    # atualiza apenas o slider ativo
+    if current_slider < len(sliders):
+        sliders[current_slider].update(dt)
 
-    # poe essa porra na tela
-    displaysurface.fill((0, 0, 0))
-    for s in sliders:
-        s.draw(displaysurface)
+    # desenha
+    displaysurface.fill((0, 100, 0))
+
+    if current_slider < len(sliders):
+        label = font.render(slider_labels[current_slider], True, (255, 255, 255))
+
+        # Condicionais para cada slider que garamtem q eles fiquem
+        if slider_labels[current_slider] == "POSIÇÃO":
+            displaysurface.blit(label, (WIDTH // 2 - label.get_width() // 2, 440))
+        if slider_labels[current_slider] == "ALTURA":
+            displaysurface.blit(label, (WIDTH // 2 - label.get_width() // 2, 490))
+        if slider_labels[current_slider] == "FORÇA":
+            displaysurface.blit(label, (WIDTH // 2 - label.get_width() // 2, 540))
+
+        sliders[current_slider].draw(displaysurface)
+    else:
+        done_text = font.render("Todos os sliders definidos!", True, (255, 255, 255))
+        displaysurface.blit(done_text, (WIDTH // 2 - done_text.get_width() // 2, 300))
+
     pygame.display.update()
