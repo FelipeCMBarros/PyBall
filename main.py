@@ -1,192 +1,440 @@
-# importações necessárias
 import pygame
-from pygame.locals import *
 import sys
 import random
-import os
 
 pygame.init()
 
-vec = pygame.math.Vector2  # 2 para cálculos em 2 dimensões
-
-# tamanho da janela
-WIDTH = 800
-HEIGHT = 600
-
-# configura o framerate
-FPS = 60
-FramePerSec = pygame.time.Clock()
-
-font = pygame.font.SysFont(None, 48)
-small_font = pygame.font.SysFont(None, 32)
-
-displaysurface = pygame.display.set_mode((WIDTH, HEIGHT))
+LARGURA, ALTURA = 1000, 700
+tela = pygame.display.set_mode((LARGURA, ALTURA))
 pygame.display.set_caption("PyBall")
 
-# Definição das classes dos principais objetos
+# Cores
+BRANCO = (255, 255, 255)
+PRETO = (0, 0, 0)
+VERDE = (50, 200, 50)
+VERMELHO = (200, 50, 50)
+CINZA = (100, 100, 100)
+AMARELO = (255, 255, 0)
 
-# Classe do JGADOR 
-class Jogador(pygame.sprite.Sprite):
-    def __init__(self, pos):
-        super().__init__()
-        self.image = pygame.Surface((40, 80))
-        self.image.fill((255, 255, 255))
-        self.rect = self.image.get_rect(center=pos)
-        self.chutando = False
+relogio = pygame.time.Clock()
+FPS = 60
 
-    def chutar(self, forca, destino):
-        self.chutando = True
-        # O destino será uma tupla (x, y) no gol
-        # A força será traduzida para velocidade da bola
-        return Bola(self.rect.center, destino, forca)
+# Opções do jogo
+OPCAO_ESCOLHER = "escolher"
+OPCAO_CHUTAR = "chutar"
+OPCAO_RESULTADO = "resultado"
+OPCAO_FIM_JOGO = "fim_jogo"
 
-    def update(self):
-        pass
+# Variáveis
+estado_jogo = OPCAO_ESCOLHER
+pontuacao_jogador = 0
+pontuacao_goleiro = 0
+numero_rodada = 0
+rodadas_maximas = 5
 
-# Classe da BOLA 
-class Bola(pygame.sprite.Sprite):
-    def __init__(self, pos_inicial, destino, forca):
-        super().__init__()
-        self.image = pygame.Surface((20, 20), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, (255, 255, 255), (10, 10), 10)
-        self.rect = self.image.get_rect(center=pos_inicial)
+escolha_jogador = None
+escolha_goleiro = None
+temporizador_resultado = 0
+cor_flash = None
 
-        # Vetores de movimento
-        self.pos = vec(pos_inicial)
-        self.destino = vec(destino)
-        direcao = (self.destino - self.pos).normalize()
-        self.velocidade = direcao * forca
+# Animação da bola
+bola_x = LARGURA // 2
+bola_y = ALTURA - 100
+bola_alvo_x = LARGURA // 2
+bola_alvo_y = ALTURA // 2
+bola_animando = False
+progresso_animacao_bola = 0
 
-    def update(self):
-        self.pos += self.velocidade
-        self.rect.center = self.pos
+# Animação do goleiro
+goleiro_x = LARGURA // 2
+goleiro_y = 560
+goleiro_alvo_x = LARGURA // 2
+goleiro_alvo_y = 500
+goleiro_animando = False
+progresso_animacao_goleiro = 0
+goleiro_no_chao = False
 
-        # Verifica se passou do gol (simples, depois refinamos)
-        if self.pos.y < 50:
-            self.kill()
+# Confete
+confete = []
 
-# Classe do GOLEIRO 
-class Goleiro(pygame.sprite.Sprite):
-    def __init__(self, pos):
-        super().__init__()
-        self.image = pygame.Surface((60, 80))
-        self.image.fill((255, 165, 0))
-        self.rect = self.image.get_rect(center=pos)
-        self.direcao = 1
-        self.vel = 3
+# Zonas do gol (4 cantos) - posicionadas na parte inferior da tela
+# Ajustadas para alinhar visualmente com o gol maior e mais baixo
+zonas_gol = [
+    pygame.Rect(220, 460, 200, 150),  # superior-esquerdo
+    pygame.Rect(580, 460, 200, 150),  # superior-direito
+    pygame.Rect(220, 610, 200, 150),  # inferior-esquerdo
+    pygame.Rect(580, 610, 200, 150)   # inferior-direito
+]
 
-    def mover(self):
-        # Movimento lateral simples de vai-e-volta
-        self.rect.x += self.vel * self.direcao
-        if self.rect.left < 250 or self.rect.right > 550:
-            self.direcao *= -1
+# Carregar recursos
+def carregar_recursos():
+    global imagem_fundo, imagem_gol, imagem_bola
+    global goleiro_parado, goleiro_superior_esquerdo, goleiro_superior_direito
+    global goleiro_inferior_esquerdo, goleiro_inferior_direito
 
-    def update(self):
-        self.mover()
+    try:
+        # Fundo
+        imagem_fundo = pygame.image.load("estadiobg.jpg")
+        imagem_fundo = pygame.transform.scale(imagem_fundo, (LARGURA, ALTURA))
 
-# Classe do GOL 
-class Gol(pygame.sprite.Sprite):
-    def __init__(self, pos, largura, altura):
-        super().__init__()
-        self.image = pygame.Surface((largura, altura))
-        self.image.fill((255, 255, 255))
-        self.rect = self.image.get_rect(center=pos)
+        # Gol (maior)
+        imagem_gol = pygame.image.load("goalp1.png")
+        # Gol mais largo + mais alto — ajuste esses números se quiser maior/menor
+        imagem_gol = pygame.transform.scale(imagem_gol, (1200, 1000))
 
-# Classe de um SLIDER 
-class Slider:
-    def __init__(self, x, y, width, height,  speed_range=(150, 300), color=(0, 0, 255)):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.indicador_pos = random.uniform(self.rect.left, self.rect.right) # Coloca o pontinho num lugar aleatorio
-        self.speed = random.uniform(*speed_range) # Randomiza uma velocidade qualquer para o pontinho 
-        self.direction = self.direction = random.choice([-1, 1]) # 1 -> Direita e -1-> Esquerda
-        self.color = color
-        self.active = True
-        self.value = None  # valor travado de 0 a 1
+        # Bola
+        imagem_bola = pygame.image.load("ballp1.png")
+        imagem_bola = pygame.transform.scale(imagem_bola, (50, 50))
 
-    def update(self, dt):
-        if not self.active:
-            return
+        # Sprites do goleiro (aumentados um pouco para combinar com o gol maior)
+        goleiro_parado = pygame.image.load("goalkeeperstillp1.png")
+        goleiro_parado = pygame.transform.scale(goleiro_parado, (140, 200))
 
-        # Atualiza a posição
-        self.indicador_pos += self.speed * self.direction * dt
+        goleiro_topo = pygame.image.load("goalkeepertop.png")
+        goleiro_topo = pygame.transform.scale(goleiro_topo, (240, 170))
+        goleiro_superior_esquerdo = goleiro_topo
+        goleiro_superior_direito = pygame.transform.flip(goleiro_topo, True, False)
 
-        # Verifica ultrapassagem e reflete suavemente
-        if self.indicador_pos < self.rect.left:
-            excesso = self.rect.left - self.indicador_pos
-            self.indicador_pos = self.rect.left + excesso
-            self.direction *= -1
-        elif self.indicador_pos > self.rect.right:
-            excesso = self.indicador_pos - self.rect.right
-            self.indicador_pos = self.rect.right - excesso
-            self.direction *= -1
+        goleiro_baixo = pygame.image.load("goalkeeperbottomp1.png")
+        goleiro_baixo = pygame.transform.scale(goleiro_baixo, (260, 150))
+        goleiro_inferior_direito = goleiro_baixo
+        goleiro_inferior_esquerdo = pygame.transform.flip(goleiro_baixo, True, False)
 
-    def lock_value(self):
-        # Trava o valor atual do slider
-        rel_pos = (self.indicador_pos - self.rect.left) / self.rect.width
-        self.value = max(0.0, min(1.0, rel_pos))
-        self.active = False
+        print("Todos os recursos carregados com sucesso!")
+        return True
 
-    def draw(self, surface):
-        # Desenha a barra e o indicador
-        pygame.draw.rect(surface, (180, 180, 180), self.rect, border_radius=5)
-        pygame.draw.rect(surface, self.color, self.rect, 3, border_radius=5)
-        indicador_x = int(self.indicador_pos)
-        indicador_y = self.rect.centery
-        pygame.draw.circle(surface, (255, 255, 255), (indicador_x, indicador_y), self.rect.height // 2)
+    except Exception as e:
+        print(f"Erro ao carregar recursos: {e}")
+        print("Certifique-se de que todos os arquivos de imagem estão na mesma pasta do arquivo .py")
+        return False
 
-        # Mostra valor se estiver travado
-        if self.value is not None:
-            val_text = small_font.render(f"{self.value:.2f}", True, (255, 255, 255))
-            surface.blit(val_text, (self.rect.x + self.rect.width + 15, self.rect.y))
+# Carregar todos os recursos
+recursos_carregados = carregar_recursos()
 
-# sliders de teste
-slider_x = Slider(45, 450, 200, 20, color=(255, 0, 0))   # posição horizontal
-slider_y = Slider(45, 500, 200, 20, color=(0, 255, 0))   # altura
-slider_force = Slider(45, 550, 200, 20, color=(0, 0, 255))  # força
+def criar_confete():
+    particulas = []
+    for _ in range(60):
+        x = random.randint(0, LARGURA)
+        y = random.randint(-100, 0)
+        cor = random.choice([VERDE, AMARELO, (255, 165, 0), BRANCO])
+        velocidade = random.randint(3, 8)
+        tamanho = random.randint(4, 8)
+        particulas.append([x, y, cor, velocidade, tamanho])
+    return particulas
 
-sliders = [slider_x, slider_y, slider_force]
-slider_labels = ["POSIÇÃO", "ALTURA", "FORÇA"]
-current_slider = 0
+def atualizar_confete():
+    global confete
+    novo_confete = []
+    for particula in confete:
+        particula[1] += particula[3]
+        if particula[1] < ALTURA:
+            novo_confete.append(particula)
+    confete = novo_confete
 
-running = True
-while running:
-    dt = FramePerSec.tick(FPS) / 1000
+def desenhar_confete():
+    for particula in confete:
+        pygame.draw.circle(tela, particula[2], (int(particula[0]), int(particula[1])), particula[4])
 
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            pygame.quit()
-            sys.exit()
-        elif event.type == KEYDOWN and event.key == K_SPACE:
-            # trava o slider atual
-            sliders[current_slider].lock_value()
-            current_slider += 1
-            if current_slider >= len(sliders):
-                # todos travados
-                valores = [s.value for s in sliders]
-                print(f"VALORES FINAIS: posição={valores[0]:.2f}, altura={valores[1]:.2f}, força={valores[2]:.2f}")
-                running = False
+def desenhar_zonas_gol():
+    """Desenhar zonas clicáveis do gol"""
+    for i, zona in enumerate(zonas_gol):
+        if estado_jogo == OPCAO_ESCOLHER:
+            pos_mouse = pygame.mouse.get_pos()
+            if zona.collidepoint(pos_mouse):
+                # Destaque ao passar o mouse
+                s = pygame.Surface((zona.width, zona.height), pygame.SRCALPHA)
+                s.fill((255, 255, 100, 80))
+                tela.blit(s, zona.topleft)
+                pygame.draw.rect(tela, AMARELO, zona, 4)
+            else:
+                pygame.draw.rect(tela, BRANCO, zona, 2)
+        elif estado_jogo == OPCAO_RESULTADO and not bola_animando:
+            # Mostrar escolha do jogador
+            if i == escolha_jogador:
+                pygame.draw.rect(tela, VERDE, zona, 6)
 
-    # atualiza apenas o slider ativo
-    if current_slider < len(sliders):
-        sliders[current_slider].update(dt)
+def desenhar_goleiro():
+    """Desenhar sprite do goleiro"""
+    if not recursos_carregados:
+        # Retângulo de fallback
+        pygame.draw.rect(tela, (255, 140, 0), (int(goleiro_x - 30), int(goleiro_y - 60), 60, 120))
+        return
 
-    # desenha
-    displaysurface.fill((0, 100, 0))
-
-    if current_slider < len(sliders):
-        label = font.render(slider_labels[current_slider], True, (255, 255, 255))
-
-        # Condicionais para cada slider que garamtem q eles fiquem
-        if slider_labels[current_slider] == "POSIÇÃO":
-            displaysurface.blit(label, (WIDTH // 2 - label.get_width() // 2, 440))
-        if slider_labels[current_slider] == "ALTURA":
-            displaysurface.blit(label, (WIDTH // 2 - label.get_width() // 2, 490))
-        if slider_labels[current_slider] == "FORÇA":
-            displaysurface.blit(label, (WIDTH // 2 - label.get_width() // 2, 540))
-
-        sliders[current_slider].draw(displaysurface)
+    if goleiro_no_chao or goleiro_animando:
+        # Escolher sprite de mergulho baseado na zona
+        if escolha_goleiro == 0:  # superior-esquerdo
+            sprite = goleiro_superior_esquerdo
+        elif escolha_goleiro == 1:  # superior-direito
+            sprite = goleiro_superior_direito
+        elif escolha_goleiro == 2:  # inferior-esquerdo
+            sprite = goleiro_inferior_esquerdo
+        elif escolha_goleiro == 3:  # inferior-direito
+            sprite = goleiro_inferior_direito
+        else:
+            sprite = goleiro_parado
     else:
-        done_text = font.render("Todos os sliders definidos!", True, (255, 255, 255))
-        displaysurface.blit(done_text, (WIDTH // 2 - done_text.get_width() // 2, 300))
+        sprite = goleiro_parado
 
-    pygame.display.update()
+    ret = sprite.get_rect(center=(int(goleiro_x), int(goleiro_y)))
+    tela.blit(sprite, ret)
+
+def desenhar_bola():
+    """Desenhar sprite da bola"""
+    if not recursos_carregados:
+        pygame.draw.circle(tela, BRANCO, (int(bola_x), int(bola_y)), 20)
+        return
+
+    ret = imagem_bola.get_rect(center=(int(bola_x), int(bola_y)))
+    tela.blit(imagem_bola, ret)
+
+def desenhar_interface():
+    """Desenhar pontuação e elementos da interface"""
+    fonte = pygame.font.Font(None, 56)
+    fonte_pequena = pygame.font.Font(None, 36)
+
+    # Pontuação com fundo
+    texto_pontuacao = fonte.render(f"VOCÊ {pontuacao_jogador} - {pontuacao_goleiro} GOLEIRO", True, BRANCO)
+    ret_pontuacao = texto_pontuacao.get_rect(center=(LARGURA // 2, 40))
+
+    # Fundo semi-transparente
+    ret_fundo = pygame.Rect(ret_pontuacao.left - 20, ret_pontuacao.top - 10,
+                          ret_pontuacao.width + 40, ret_pontuacao.height + 20)
+    s = pygame.Surface((ret_fundo.width, ret_fundo.height), pygame.SRCALPHA)
+    s.fill((0, 0, 0, 150))
+    tela.blit(s, ret_fundo.topleft)
+    tela.blit(texto_pontuacao, ret_pontuacao)
+
+    # Rodada
+    texto_rodada = fonte_pequena.render(f"Rodada {numero_rodada}/{rodadas_maximas}", True, BRANCO)
+    ret_rodada = texto_rodada.get_rect(center=(LARGURA // 2, 90))
+    ret_fundo2 = pygame.Rect(ret_rodada.left - 15, ret_rodada.top - 5,
+                           ret_rodada.width + 30, ret_rodada.height + 10)
+    s2 = pygame.Surface((ret_fundo2.width, ret_fundo2.height), pygame.SRCALPHA)
+    s2.fill((0, 0, 0, 150))
+    tela.blit(s2, ret_fundo2.topleft)
+    tela.blit(texto_rodada, ret_rodada)
+
+    # Instruções
+    if estado_jogo == OPCAO_ESCOLHER:
+        texto_inst = fonte_pequena.render("Clique em um canto para chutar!", True, BRANCO)
+        ret_inst = texto_inst.get_rect(center=(LARGURA // 2, ALTURA - 50))
+        ret_fundo3 = pygame.Rect(ret_inst.left - 15, ret_inst.top - 5,
+                               ret_inst.width + 30, ret_inst.height + 10)
+        s3 = pygame.Surface((ret_fundo3.width, ret_fundo3.height), pygame.SRCALPHA)
+        s3.fill((0, 0, 0, 180))
+        tela.blit(s3, ret_fundo3.topleft)
+        tela.blit(texto_inst, ret_inst)
+
+def desenhar_resultado():
+    """Desenhar resultado de gol/defesa"""
+    fonte = pygame.font.Font(None, 80)
+    if escolha_jogador == escolha_goleiro:
+        texto = fonte.render("DEFENDEU!", True, VERMELHO)
+    else:
+        texto = fonte.render("GOOOOL!", True, VERDE)
+
+    ret_texto = texto.get_rect(center=(LARGURA // 2, ALTURA - 80))
+
+    # Fundo
+    ret_fundo = pygame.Rect(ret_texto.left - 20, ret_texto.top - 10,
+                          ret_texto.width + 40, ret_texto.height + 20)
+    s = pygame.Surface((ret_fundo.width, ret_fundo.height), pygame.SRCALPHA)
+    s.fill((0, 0, 0, 200))
+    tela.blit(s, ret_fundo.topleft)
+    tela.blit(texto, ret_texto)
+
+def desenhar_fim_jogo():
+    """Desenhar tela de fim de jogo"""
+    fonte = pygame.font.Font(None, 90)
+    fonte_pequena = pygame.font.Font(None, 40)
+
+    if pontuacao_jogador > pontuacao_goleiro:
+        texto_resultado = fonte.render("VOCÊ VENCEU!", True, VERDE)
+    elif pontuacao_goleiro > pontuacao_jogador:
+        texto_resultado = fonte.render("VOCÊ PERDEU!", True, VERMELHO)
+    else:
+        texto_resultado = fonte.render("EMPATE!", True, AMARELO)
+
+    ret_resultado = texto_resultado.get_rect(center=(LARGURA // 2, ALTURA // 2))
+
+    # Fundo
+    ret_fundo = pygame.Rect(ret_resultado.left - 30, ret_resultado.top - 20,
+                          ret_resultado.width + 60, ret_resultado.height + 40)
+    s = pygame.Surface((ret_fundo.width, ret_fundo.height), pygame.SRCALPHA)
+    s.fill((0, 0, 0, 220))
+    tela.blit(s, ret_fundo.topleft)
+    tela.blit(texto_resultado, ret_resultado)
+
+    texto_reiniciar = fonte_pequena.render("Pressione ESPAÇO para jogar novamente", True, BRANCO)
+    ret_reiniciar = texto_reiniciar.get_rect(center=(LARGURA // 2, ALTURA // 2 + 80))
+    ret_fundo2 = pygame.Rect(ret_reiniciar.left - 20, ret_reiniciar.top - 10,
+                           ret_reiniciar.width + 40, ret_reiniciar.height + 20)
+    s2 = pygame.Surface((ret_fundo2.width, ret_fundo2.height), pygame.SRCALPHA)
+    s2.fill((0, 0, 0, 220))
+    tela.blit(s2, ret_fundo2.topleft)
+    tela.blit(texto_reiniciar, ret_reiniciar)
+
+def resetar_jogo():
+    global estado_jogo, pontuacao_jogador, pontuacao_goleiro, numero_rodada
+    global escolha_jogador, escolha_goleiro, temporizador_resultado, confete
+    global bola_x, bola_y, bola_animando, progresso_animacao_bola
+    global goleiro_x, goleiro_y, goleiro_animando, progresso_animacao_goleiro, goleiro_no_chao
+
+    estado_jogo = OPCAO_ESCOLHER
+    pontuacao_jogador = 0
+    pontuacao_goleiro = 0
+    numero_rodada = 0
+    escolha_jogador = None
+    escolha_goleiro = None
+    temporizador_resultado = 0
+    confete = []
+
+    bola_x = LARGURA // 2
+    bola_y = ALTURA - 100
+    bola_animando = False
+    progresso_animacao_bola = 0
+
+    goleiro_x = LARGURA // 2
+    goleiro_y = 560
+    goleiro_animando = False
+    progresso_animacao_goleiro = 0
+    goleiro_no_chao = False
+
+# Loop principal do jogo
+rodando = True
+while rodando:
+    for evento in pygame.event.get():
+        if evento.type == pygame.QUIT:
+            rodando = False
+
+        if evento.type == pygame.MOUSEBUTTONDOWN and estado_jogo == OPCAO_ESCOLHER:
+            pos_mouse = pygame.mouse.get_pos()
+            for i, zona in enumerate(zonas_gol):
+                if zona.collidepoint(pos_mouse):
+                    escolha_jogador = i
+                    escolha_goleiro = random.randint(0, 3)
+                    estado_jogo = OPCAO_CHUTAR
+
+                    # Iniciar animações
+                    bola_animando = True
+                    progresso_animacao_bola = 0
+                    bola_alvo_x = zonas_gol[escolha_jogador].centerx
+                    bola_alvo_y = zonas_gol[escolha_jogador].centery
+
+                    goleiro_animando = True
+                    progresso_animacao_goleiro = 0
+                    goleiro_alvo_x = zonas_gol[escolha_goleiro].centerx
+                    goleiro_alvo_y = zonas_gol[escolha_goleiro].centery
+
+                    temporizador_resultado = 180
+
+                    if escolha_jogador == escolha_goleiro:
+                        pontuacao_goleiro += 1
+                        cor_flash = VERMELHO
+                    else:
+                        pontuacao_jogador += 1
+                        cor_flash = VERDE
+                        confete = criar_confete()
+
+                    numero_rodada += 1
+                    estado_jogo = OPCAO_RESULTADO
+
+        if evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_SPACE and estado_jogo == OPCAO_FIM_JOGO:
+                resetar_jogo()
+
+    # Atualizar animação da bola
+    if bola_animando:
+        progresso_animacao_bola += 0.06
+        if progresso_animacao_bola >= 1.0:
+            progresso_animacao_bola = 1.0
+            bola_animando = False
+
+        # Movimento da bola com arco
+        t = progresso_animacao_bola
+        inicio_x, inicio_y = LARGURA // 2, ALTURA - 100
+        bola_x = inicio_x + (bola_alvo_x - inicio_x) * t
+
+        # Arco parabólico
+        altura_arco = -150
+        bola_y = inicio_y + (bola_alvo_y - inicio_y) * t + altura_arco * (4 * t * (1 - t))
+
+    # Atualizar animação do goleiro
+    if goleiro_animando:
+        progresso_animacao_goleiro += 0.08
+        if progresso_animacao_goleiro >= 1.0:
+            progresso_animacao_goleiro = 1.0
+            goleiro_animando = False
+            goleiro_no_chao = True
+
+        t = progresso_animacao_goleiro
+        inicio_x, inicio_y = LARGURA // 2, 560
+        goleiro_x = inicio_x + (goleiro_alvo_x - inicio_x) * t
+
+        # Arco do mergulho: determinar se está mirando para cima ou para baixo
+        if goleiro_alvo_y > 580:  # Inferior (usar limite mais alto porque zonas desceram)
+            altura_arco = -20
+            chao_y = 600
+        else:  # Superior
+            altura_arco = -35
+            chao_y = goleiro_alvo_y
+
+        goleiro_y = inicio_y + (chao_y - inicio_y) * t + altura_arco * (4 * t * (1 - t))
+
+    # Atualizar temporizador de resultado
+    if estado_jogo == OPCAO_RESULTADO:
+        temporizador_resultado -= 1
+        atualizar_confete()
+        if temporizador_resultado <= 0:
+            if numero_rodada >= rodadas_maximas:
+                estado_jogo = OPCAO_FIM_JOGO
+            else:
+                estado_jogo = OPCAO_ESCOLHER
+                escolha_jogador = None
+                escolha_goleiro = None
+                bola_x = LARGURA // 2
+                bola_y = ALTURA - 100
+                goleiro_x = LARGURA // 2
+                goleiro_y = 560
+                goleiro_no_chao = False
+
+    # Desenhar tudo
+    if estado_jogo == OPCAO_RESULTADO and cor_flash and temporizador_resultado > 150:
+        tela.fill(cor_flash)
+    else:
+        if recursos_carregados:
+            tela.blit(imagem_fundo, (0, 0))
+        else:
+            tela.fill((0, 100, 0))
+
+    # Desenhar gol (abaixado para y=620)
+    if recursos_carregados:
+        ret_gol = imagem_gol.get_rect(center=(LARGURA // 2, 620))
+        tela.blit(imagem_gol, ret_gol)
+
+    # Desenhar zonas do gol
+    desenhar_zonas_gol()
+
+    # Desenhar goleiro
+    desenhar_goleiro()
+
+    # Desenhar bola
+    desenhar_bola()
+
+    # Desenhar interface
+    desenhar_interface()
+
+    # Desenhar resultado
+    if estado_jogo == OPCAO_RESULTADO and not bola_animando:
+        desenhar_resultado()
+        desenhar_confete()
+
+    # Desenhar fim de jogo
+    if estado_jogo == OPCAO_FIM_JOGO:
+        desenhar_fim_jogo()
+
+    pygame.display.flip()
+    relogio.tick(FPS)
+
+pygame.quit()
+sys.exit()
