@@ -37,9 +37,12 @@ escolha_goleiro = None
 temporizador_resultado = 0
 cor_flash = None
 
+# VARIÁVEL DE AJUSTE VERTICAL - Altere este valor para mover tudo para cima/baixo
+AJUSTE_VERTICAL_GOL = -120  # Negativo sobe, positivo desce
+
 # Animação da bola
 bola_x = LARGURA // 2
-bola_y = ALTURA - 100
+bola_y = (ALTURA) + AJUSTE_VERTICAL_GOL
 bola_alvo_x = LARGURA // 2
 bola_alvo_y = ALTURA // 2
 bola_animando = False
@@ -47,9 +50,9 @@ progresso_animacao_bola = 0
 
 # Animação do goleiro
 goleiro_x = LARGURA // 2
-goleiro_y = 560
+goleiro_y = 560 + AJUSTE_VERTICAL_GOL
 goleiro_alvo_x = LARGURA // 2
-goleiro_alvo_y = 500
+goleiro_alvo_y = 500 + AJUSTE_VERTICAL_GOL
 goleiro_animando = False
 progresso_animacao_goleiro = 0
 goleiro_no_chao = False
@@ -60,10 +63,10 @@ confete = []
 # Zonas do gol (4 cantos) - posicionadas na parte inferior da tela
 # Ajustadas para alinhar visualmente com o gol maior e mais baixo
 zonas_gol = [
-    pygame.Rect(220, 460, 200, 150),  # superior-esquerdo
-    pygame.Rect(580, 460, 200, 150),  # superior-direito
-    pygame.Rect(220, 610, 200, 150),  # inferior-esquerdo
-    pygame.Rect(580, 610, 200, 150)   # inferior-direito
+    pygame.Rect(220, 460 + AJUSTE_VERTICAL_GOL, 200, 150),  # superior-esquerdo
+    pygame.Rect(580, 460 + AJUSTE_VERTICAL_GOL, 200, 150),  # superior-direito
+    pygame.Rect(220, 610 + AJUSTE_VERTICAL_GOL, 200, 150),  # inferior-esquerdo
+    pygame.Rect(580, 610 + AJUSTE_VERTICAL_GOL, 200, 150)   # inferior-direito
 ]
 
 # Carregar recursos
@@ -74,7 +77,7 @@ def carregar_recursos():
 
     try:
         # Fundo
-        imagem_fundo = pygame.image.load("estadiobg.jpg")
+        imagem_fundo = pygame.image.load("bgpropostagpt.png")
         imagem_fundo = pygame.transform.scale(imagem_fundo, (LARGURA, ALTURA))
 
         # Gol (maior)
@@ -352,7 +355,7 @@ while rodando:
 
         # Movimento da bola com arco
         t = progresso_animacao_bola
-        inicio_x, inicio_y = LARGURA // 2, ALTURA - 100
+        inicio_x, inicio_y = LARGURA // 2, (ALTURA - 100) + AJUSTE_VERTICAL_GOL
         bola_x = inicio_x + (bola_alvo_x - inicio_x) * t
 
         # Arco parabólico
@@ -368,13 +371,13 @@ while rodando:
             goleiro_no_chao = True
 
         t = progresso_animacao_goleiro
-        inicio_x, inicio_y = LARGURA // 2, 560
+        inicio_x, inicio_y = LARGURA // 2, 560 + AJUSTE_VERTICAL_GOL
         goleiro_x = inicio_x + (goleiro_alvo_x - inicio_x) * t
 
         # Arco do mergulho: determinar se está mirando para cima ou para baixo
-        if goleiro_alvo_y > 580:  # Inferior (usar limite mais alto porque zonas desceram)
+        if goleiro_alvo_y > (580 + AJUSTE_VERTICAL_GOL):  # Inferior (usar limite mais alto porque zonas desceram)
             altura_arco = -20
-            chao_y = 600
+            chao_y = 600 + AJUSTE_VERTICAL_GOL
         else:  # Superior
             altura_arco = -35
             chao_y = goleiro_alvo_y
@@ -409,7 +412,7 @@ while rodando:
 
     # Desenhar gol (abaixado para y=620)
     if recursos_carregados:
-        ret_gol = imagem_gol.get_rect(center=(LARGURA // 2, 620))
+        ret_gol = imagem_gol.get_rect(center=(LARGURA // 2, 620 + AJUSTE_VERTICAL_GOL * 0.8))
         tela.blit(imagem_gol, ret_gol)
 
     # Desenhar zonas do gol
