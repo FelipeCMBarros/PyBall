@@ -101,7 +101,7 @@ def carregar_recursos():
         goleiro_parado = pygame.transform.scale(goleiro_parado, (140, 200))
 
         goleiro_topo = pygame.image.load("goalkeepertop.png")
-        goleiro_topo = pygame.transform.scale(goleiro_topo, (240, 170))
+        goleiro_topo = pygame.transform.scale(goleiro_topo, (240, 230))
         goleiro_superior_esquerdo = goleiro_topo
         goleiro_superior_direito = pygame.transform.flip(goleiro_topo, True, False)
 
@@ -388,7 +388,7 @@ while rodando:
             chao_y = GOLEIRO_CHAO_Y + GOLEIRO_OFFSET_FIM  # <- desloca o final do mergulho
         else:  # Superior
             altura_arco = -22
-            chao_y = goleiro_alvo_y + GOLEIRO_OFFSET_FIM*0.5  # <- idem para os de cima
+            chao_y = goleiro_alvo_y + GOLEIRO_OFFSET_FIM  # <- idem para os de cima
 
         goleiro_y = inicio_y + (chao_y - inicio_y) * t + altura_arco * (4 * t * (1 - t))
 
