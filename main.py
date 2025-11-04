@@ -65,11 +65,12 @@ goleiro_no_chao = False
 confete = []
 
 # MUDANÇA 1: Zonas do gol como círculos (centro_x, centro_y, raio)
+# Círculos ajustados visualmente - direita mais afastada
 zonas_gol_circulos = [
-    (320, 535 + AJUSTE_VERTICAL_GOL, 25),  # superior-esquerdo
-    (680, 535 + AJUSTE_VERTICAL_GOL, 25),  # superior-direito
-    (320, 685 + AJUSTE_VERTICAL_GOL, 25),  # inferior-esquerdo
-    (680, 685 + AJUSTE_VERTICAL_GOL, 25)   # inferior-direito
+    (280, 500 + AJUSTE_VERTICAL_GOL, 25),  # superior-esquerdo
+    (730, 500 + AJUSTE_VERTICAL_GOL, 25),  # superior-direito
+    (260, 660 + AJUSTE_VERTICAL_GOL, 25),  # inferior-esquerdo
+    (750, 660 + AJUSTE_VERTICAL_GOL, 25)   # inferior-direito
 ]
 
 # Carregar recursos
@@ -287,8 +288,9 @@ def resetar_jogo():
     temporizador_resultado = 0
     confete = []
 
+    # Usar posição inicial consistente
     bola_x = LARGURA // 2
-    bola_y = ALTURA - 100
+    bola_y = (ALTURA + AJUSTE_VERTICAL_GOL + 120)
     bola_animando = False
     progresso_animacao_bola = 0
 
@@ -365,14 +367,21 @@ while rodando:
 
         t = progresso_animacao_goleiro
         inicio_x, inicio_y = LARGURA // 2, GOLEIRO_BASE_Y
-        goleiro_x = inicio_x + (goleiro_alvo_x - inicio_x) * t
-
-        if goleiro_alvo_y > GOLEIRO_INFERIOR_THRESHOLD:
+        
+        # Limitar movimento horizontal do goleiro para não sair do gol
+        alvo_x_limitado = max(300, min(700, goleiro_alvo_x))
+        
+        # Reduzir movimento para mergulhos superiores (zonas 0 e 1)
+        if escolha_goleiro in [0, 1]:  # Superior
+            # Movimento horizontal um pouco reduzido (75% do movimento total)
+            goleiro_x = inicio_x + (alvo_x_limitado - inicio_x) * t * 0.75
+            # Arco mais baixo para não pular tanto
+            altura_arco = -12
+            chao_y = goleiro_alvo_y + GOLEIRO_OFFSET_FIM
+        else:  # Inferior
+            goleiro_x = inicio_x + (alvo_x_limitado - inicio_x) * t
             altura_arco = -12
             chao_y = GOLEIRO_CHAO_Y + GOLEIRO_OFFSET_FIM
-        else:
-            altura_arco = -22
-            chao_y = goleiro_alvo_y + GOLEIRO_OFFSET_FIM
 
         goleiro_y = inicio_y + (chao_y - inicio_y) * t + altura_arco * (4 * t * (1 - t))
 
@@ -387,8 +396,9 @@ while rodando:
                 estado_jogo = OPCAO_ESCOLHER
                 escolha_jogador = None
                 escolha_goleiro = None
+                # Resetar bola para posição inicial consistente
                 bola_x = LARGURA // 2
-                bola_y = ALTURA - 100
+                bola_y = (ALTURA + AJUSTE_VERTICAL_GOL + 120)
                 goleiro_x = LARGURA // 2
                 goleiro_y = GOLEIRO_BASE_Y
                 goleiro_no_chao = False
