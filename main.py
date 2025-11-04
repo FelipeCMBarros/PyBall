@@ -38,11 +38,11 @@ temporizador_resultado = 0
 cor_flash = None
 
 # VARIÁVEL DE AJUSTE VERTICAL - Altere este valor para mover tudo para cima/baixo
-AJUSTE_VERTICAL_GOL = -120  # Negativo sobe, positivo desce
+AJUSTE_VERTICAL_GOL = -165  # Negativo sobe, positivo desce
 
 # Animação da bola
 bola_x = LARGURA // 2
-bola_y = (ALTURA) + AJUSTE_VERTICAL_GOL
+bola_y = (ALTURA) + AJUSTE_VERTICAL_GOL + 100
 bola_alvo_x = LARGURA // 2
 bola_alvo_y = ALTURA // 2
 bola_animando = False
@@ -50,7 +50,7 @@ progresso_animacao_bola = 0
 
 # Animação do goleiro
 goleiro_x = LARGURA // 2
-goleiro_y = 560 + AJUSTE_VERTICAL_GOL
+goleiro_y = 650 + AJUSTE_VERTICAL_GOL
 goleiro_alvo_x = LARGURA // 2
 goleiro_alvo_y = 500 + AJUSTE_VERTICAL_GOL
 goleiro_animando = False
@@ -220,7 +220,7 @@ def desenhar_interface():
     # Instruções
     if estado_jogo == OPCAO_ESCOLHER:
         texto_inst = fonte_pequena.render("Clique em um canto para chutar!", True, BRANCO)
-        ret_inst = texto_inst.get_rect(center=(LARGURA // 2, ALTURA - 50))
+        ret_inst = texto_inst.get_rect(center=(LARGURA // 2, ALTURA - 475))
         ret_fundo3 = pygame.Rect(ret_inst.left - 15, ret_inst.top - 5,
                                ret_inst.width + 30, ret_inst.height + 10)
         s3 = pygame.Surface((ret_fundo3.width, ret_fundo3.height), pygame.SRCALPHA)
