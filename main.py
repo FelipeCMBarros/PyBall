@@ -36,9 +36,16 @@ escolha_jogador = None
 escolha_goleiro = None
 temporizador_resultado = 0
 cor_flash = None
+GOLEIRO_OFFSET_FIM = 60  # quanto mais alto o número, mais para BAIXO ele termina (25 ~ encostar no chão)
 
 # VARIÁVEL DE AJUSTE VERTICAL - Altere este valor para mover tudo para cima/baixo
 AJUSTE_VERTICAL_GOL = -165  # Negativo sobe, positivo desce
+
+# --- NEW: single goalie baseline used everywhere to avoid inconsistent Y across rounds ---
+GOLEIRO_BASE_Y = 650 + AJUSTE_VERTICAL_GOL  # keep same as original first-round value
+# Threshold used to decide inferior vs superior dives (keeps it tied to AJUSTE)
+GOLEIRO_INFERIOR_THRESHOLD = 580 + AJUSTE_VERTICAL_GOL
+GOLEIRO_CHAO_Y = 600 + AJUSTE_VERTICAL_GOL
 
 # Animação da bola
 bola_x = LARGURA // 2
@@ -48,9 +55,9 @@ bola_alvo_y = ALTURA // 2
 bola_animando = False
 progresso_animacao_bola = 0
 
-# Animação do goleiro
+# Animação do goleiro - use baseline
 goleiro_x = LARGURA // 2
-goleiro_y = 650 + AJUSTE_VERTICAL_GOL
+goleiro_y = GOLEIRO_BASE_Y
 goleiro_alvo_x = LARGURA // 2
 goleiro_alvo_y = 500 + AJUSTE_VERTICAL_GOL
 goleiro_animando = False
@@ -73,7 +80,7 @@ zonas_gol = [
 def carregar_recursos():
     global imagem_fundo, imagem_gol, imagem_bola
     global goleiro_parado, goleiro_superior_esquerdo, goleiro_superior_direito
-    global goleiro_inferior_esquerdo, goleiro_inferior_direito
+    global goleiro_inferior_esquerdo, goleiro_inferior_direito, goleiro_topo, goleiro_baixo
 
     try:
         # Fundo
@@ -262,7 +269,7 @@ def desenhar_fim_jogo():
 
     # Fundo
     ret_fundo = pygame.Rect(ret_resultado.left - 30, ret_resultado.top - 20,
-                          ret_resultado.width + 60, ret_resultado.height + 40)
+                          ret_resultado.width + 60, ret_fundo.height + 40) if False else pygame.Rect(ret_resultado.left - 30, ret_resultado.top - 20, ret_resultado.width + 60, ret_resultado.height + 40)
     s = pygame.Surface((ret_fundo.width, ret_fundo.height), pygame.SRCALPHA)
     s.fill((0, 0, 0, 220))
     tela.blit(s, ret_fundo.topleft)
@@ -298,7 +305,7 @@ def resetar_jogo():
     progresso_animacao_bola = 0
 
     goleiro_x = LARGURA // 2
-    goleiro_y = 560
+    goleiro_y = GOLEIRO_BASE_Y  # <-- consistent baseline
     goleiro_animando = False
     progresso_animacao_goleiro = 0
     goleiro_no_chao = False
@@ -371,16 +378,17 @@ while rodando:
             goleiro_no_chao = True
 
         t = progresso_animacao_goleiro
-        inicio_x, inicio_y = LARGURA // 2, 560 + AJUSTE_VERTICAL_GOL
+        inicio_x, inicio_y = LARGURA // 2, GOLEIRO_BASE_Y  # <-- use baseline everywhere
         goleiro_x = inicio_x + (goleiro_alvo_x - inicio_x) * t
 
         # Arco do mergulho: determinar se está mirando para cima ou para baixo
-        if goleiro_alvo_y > (580 + AJUSTE_VERTICAL_GOL):  # Inferior (usar limite mais alto porque zonas desceram)
-            altura_arco = -20
-            chao_y = 600 + AJUSTE_VERTICAL_GOL
+        # --- Reduced magnitudes so dives are lower (less high) ---
+        if goleiro_alvo_y > GOLEIRO_INFERIOR_THRESHOLD:  # Inferior
+            altura_arco = -12
+            chao_y = GOLEIRO_CHAO_Y + GOLEIRO_OFFSET_FIM  # <- desloca o final do mergulho
         else:  # Superior
-            altura_arco = -35
-            chao_y = goleiro_alvo_y
+            altura_arco = -22
+            chao_y = goleiro_alvo_y + GOLEIRO_OFFSET_FIM*0.5  # <- idem para os de cima
 
         goleiro_y = inicio_y + (chao_y - inicio_y) * t + altura_arco * (4 * t * (1 - t))
 
@@ -398,7 +406,7 @@ while rodando:
                 bola_x = LARGURA // 2
                 bola_y = ALTURA - 100
                 goleiro_x = LARGURA // 2
-                goleiro_y = 560
+                goleiro_y = GOLEIRO_BASE_Y   # <-- reset to same baseline
                 goleiro_no_chao = False
 
     # Desenhar tudo
