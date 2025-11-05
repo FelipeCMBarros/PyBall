@@ -64,15 +64,14 @@ goleiro_no_chao = False
 # Confete
 confete = []
 
-# MUDANÇA: Zonas do gol como círculos (centro_x, centro_y, raio)
-# ADICIONADOS: círculo superior central (índice 4) e inferior central (índice 5)
+# Zonas do gol como círculos (centro_x, centro_y, raio)
 zonas_gol_circulos = [
     (280, 500 + AJUSTE_VERTICAL_GOL, 25),  # superior-esquerdo
     (730, 500 + AJUSTE_VERTICAL_GOL, 25),  # superior-direito
     (260, 660 + AJUSTE_VERTICAL_GOL, 25),  # inferior-esquerdo
     (750, 660 + AJUSTE_VERTICAL_GOL, 25),  # inferior-direito
-    (505, 500 + AJUSTE_VERTICAL_GOL, 25),  # NOVO: superior-central
-    (505, 660 + AJUSTE_VERTICAL_GOL, 25)   # NOVO: inferior-central
+    (505, 500 + AJUSTE_VERTICAL_GOL, 25),  # superior-central
+    (505, 660 + AJUSTE_VERTICAL_GOL, 25)   # inferior-central
 ]
 
 # Carregar recursos
@@ -80,6 +79,7 @@ def carregar_recursos():
     global imagem_fundo, imagem_gol, imagem_bola
     global goleiro_parado, goleiro_superior_esquerdo, goleiro_superior_direito
     global goleiro_inferior_esquerdo, goleiro_inferior_direito, goleiro_topo, goleiro_baixo
+    global goleiro_superior_centro, goleiro_inferior_centro
 
     try:
         imagem_fundo = pygame.image.load("bgpropostagpt.png")
@@ -103,6 +103,13 @@ def carregar_recursos():
         goleiro_baixo = pygame.transform.scale(goleiro_baixo, (260, 150))
         goleiro_inferior_direito = goleiro_baixo
         goleiro_inferior_esquerdo = pygame.transform.flip(goleiro_baixo, True, False)
+
+        # Sprites do meio
+        goleiro_superior_centro = pygame.image.load("goalietmiddletop.png")
+        goleiro_superior_centro = pygame.transform.scale(goleiro_superior_centro, (130, 230))
+
+        goleiro_inferior_centro = pygame.image.load("goaliemiddlebottom.png")
+        goleiro_inferior_centro = pygame.transform.scale(goleiro_inferior_centro, (160, 150))
 
         print("Todos os recursos carregados com sucesso!")
         return True
@@ -177,6 +184,10 @@ def desenhar_goleiro():
             sprite = goleiro_inferior_esquerdo
         elif escolha_goleiro == 3:
             sprite = goleiro_inferior_direito
+        elif escolha_goleiro == 4:
+            sprite = goleiro_superior_centro
+        elif escolha_goleiro == 5:
+            sprite = goleiro_inferior_centro
         else:
             sprite = goleiro_parado
     else:
@@ -290,7 +301,6 @@ def resetar_jogo():
     temporizador_resultado = 0
     confete = []
 
-    # Usar posição inicial consistente
     bola_x = LARGURA // 2
     bola_y = (ALTURA + AJUSTE_VERTICAL_GOL + 120)
     bola_animando = False
@@ -314,7 +324,7 @@ while rodando:
             for i, (cx, cy, raio) in enumerate(zonas_gol_circulos):
                 if ponto_dentro_circulo(pos_mouse[0], pos_mouse[1], cx, cy, raio):
                     escolha_jogador = i
-                    escolha_goleiro = random.randint(0, 3)
+                    escolha_goleiro = random.randint(0, 5)
                     estado_jogo = OPCAO_CHUTAR
 
                     # Iniciar animações
@@ -373,14 +383,20 @@ while rodando:
         # Limitar movimento horizontal do goleiro para não sair do gol
         alvo_x_limitado = max(300, min(700, goleiro_alvo_x))
         
-        # Reduzir movimento para mergulhos superiores (zonas 0 e 1)
-        if escolha_goleiro in [0, 1]:  # Superior
-            # Movimento horizontal um pouco reduzido (75% do movimento total)
+        # Ajustar movimento baseado na zona
+        if escolha_goleiro in [0, 1]:  # Superior lateral
             goleiro_x = inicio_x + (alvo_x_limitado - inicio_x) * t * 0.75
-            # Arco mais baixo para não pular tanto
             altura_arco = -12
             chao_y = goleiro_alvo_y + GOLEIRO_OFFSET_FIM
-        else:  # Inferior
+        elif escolha_goleiro == 4:  # Superior centro
+            goleiro_x = inicio_x + (alvo_x_limitado - inicio_x) * t * 0.2
+            altura_arco = -15
+            chao_y = goleiro_alvo_y + GOLEIRO_OFFSET_FIM
+        elif escolha_goleiro == 5:  # Inferior centro
+            goleiro_x = inicio_x + (alvo_x_limitado - inicio_x) * t * 0.2
+            altura_arco = -8
+            chao_y = GOLEIRO_CHAO_Y + GOLEIRO_OFFSET_FIM
+        else:  # Inferior lateral (2, 3)
             goleiro_x = inicio_x + (alvo_x_limitado - inicio_x) * t
             altura_arco = -12
             chao_y = GOLEIRO_CHAO_Y + GOLEIRO_OFFSET_FIM
@@ -398,7 +414,6 @@ while rodando:
                 estado_jogo = OPCAO_ESCOLHER
                 escolha_jogador = None
                 escolha_goleiro = None
-                # Resetar bola para posição inicial consistente
                 bola_x = LARGURA // 2
                 bola_y = (ALTURA + AJUSTE_VERTICAL_GOL + 120)
                 goleiro_x = LARGURA // 2
@@ -406,16 +421,15 @@ while rodando:
                 goleiro_no_chao = False
 
     # Desenhar tudo
-    # Desenhar fundo sempre
     if recursos_carregados:
         tela.blit(imagem_fundo, (0, 0))
     else:
         tela.fill((0, 100, 0))
 
-    # MUDANÇA 2: Flash transparente sobre o fundo
+    # Flash transparente sobre o fundo
     if estado_jogo == OPCAO_RESULTADO and cor_flash and temporizador_resultado > 150:
         s_flash = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
-        s_flash.fill((*cor_flash, 100))  # Transparência de 100 (0-255)
+        s_flash.fill((*cor_flash, 100))
         tela.blit(s_flash, (0, 0))
 
     # Desenhar gol
