@@ -64,13 +64,15 @@ goleiro_no_chao = False
 # Confete
 confete = []
 
-# MUDANÇA 1: Zonas do gol como círculos (centro_x, centro_y, raio)
-# Círculos ajustados visualmente - direita mais afastada
+# MUDANÇA: Zonas do gol como círculos (centro_x, centro_y, raio)
+# ADICIONADOS: círculo superior central (índice 4) e inferior central (índice 5)
 zonas_gol_circulos = [
     (280, 500 + AJUSTE_VERTICAL_GOL, 25),  # superior-esquerdo
     (730, 500 + AJUSTE_VERTICAL_GOL, 25),  # superior-direito
     (260, 660 + AJUSTE_VERTICAL_GOL, 25),  # inferior-esquerdo
-    (750, 660 + AJUSTE_VERTICAL_GOL, 25)   # inferior-direito
+    (750, 660 + AJUSTE_VERTICAL_GOL, 25),  # inferior-direito
+    (505, 500 + AJUSTE_VERTICAL_GOL, 25),  # NOVO: superior-central
+    (505, 660 + AJUSTE_VERTICAL_GOL, 25)   # NOVO: inferior-central
 ]
 
 # Carregar recursos
