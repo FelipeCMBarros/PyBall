@@ -48,7 +48,7 @@ def tela_inicial():
     clock = pygame.time.Clock()
 
     fonte = pygame.font.Font(None, 50)
-    texto_press = fonte.render("Pressione ENTER para jogar", True, (255, 255, 255))
+    texto_press = fonte.render("F-> Modo fácil   M -> Médio   D -> Difícil", True, (255, 255, 255))
     texto_rect = texto_press.get_rect(center=(LARGURA // 2, ALTURA - 100))
 
     while waiting:
@@ -57,7 +57,14 @@ def tela_inicial():
                 pygame.quit()
                 sys.exit()
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
+                if event.key == pygame.K_f:
+                    dificuldade = "facil"
+                    waiting = False
+                elif event.key == pygame.K_m:
+                    dificuldade = "médio"
+                    waiting = False
+                elif event.key == pygame.K_d:
+                    dificuldade = "difícil"
                     waiting = False
 
         # Desenha elementos na tela
@@ -66,13 +73,21 @@ def tela_inicial():
         tela.blit(texto_press, texto_rect)
         pygame.display.flip()
 
-        clock.tick(60)
+        clock.tick(60) 
 
     parar_musica()
     pygame.quit()
 
-    # Executa o jogo principal (penaltyp3.py)
-    subprocess.run([sys.executable, "penaltyp3.py"])
+    # Executa o jogo principal (arquivo .py de cada dificuldade respectiva)
+    if dificuldade == "facil":
+        subprocess.run([sys.executable, "facil.py"])
+
+    elif dificuldade == "médio":
+        subprocess.run([sys.executable, "medio.py"])
+
+    elif dificuldade == "difícil":
+        subprocess.run([sys.executable, "dificil.py"])
+
 
 # Executa a tela inicial
 if __name__ == "__main__":
