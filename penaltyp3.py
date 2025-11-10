@@ -3,7 +3,7 @@ import sys
 import random
 
 pygame.init()
-pygame.mixer.init()  # Inicializar mixer de áudio
+pygame.mixer.init()
 
 LARGURA, ALTURA = 1000, 700
 tela = pygame.display.set_mode((LARGURA, ALTURA))
@@ -115,24 +115,24 @@ def carregar_recursos():
 
         # Carregar sons
         try:
-            som_chute = pygame.mixer.Sound("kick.wav")
+            som_chute = pygame.mixer.Sound("sombola(1).mp3")
             som_chute.set_volume(0.7)
         except:
-            print("Som 'kick.wav' não encontrado")
+            print("Som 'sombola(1).mp3' não encontrado")
             som_chute = None
 
         try:
-            som_gol = pygame.mixer.Sound("goal.wav")
+            som_gol = pygame.mixer.Sound("somgol.mp3")
             som_gol.set_volume(0.8)
         except:
-            print("Som 'goal.wav' não encontrado")
+            print("Som 'somgol.mp3' não encontrado")
             som_gol = None
 
         try:
-            som_defesa = pygame.mixer.Sound("save.wav")
+            som_defesa = pygame.mixer.Sound("defesasom.mp3")
             som_defesa.set_volume(0.7)
         except:
-            print("Som 'save.wav' não encontrado")
+            print("Som 'defesasom.mp3' não encontrado")
             som_defesa = None
 
         print("Todos os recursos carregados com sucesso!")
