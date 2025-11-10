@@ -555,12 +555,6 @@ while rodando:
     if estado_jogo == OPCAO_RESULTADO and not bola_animando:
         desenhar_resultado()
         desenhar_confete()
-        if tela_flash_timer > 0:
-            tela_flash_timer -= 1
-            overlay = pygame.Surface((LARGURA, ALTURA))
-            overlay.fill(tela_flash_cor)
-            overlay.set_alpha(80)
-            tela.blit(overlay, (0, 0))
 
     # Desenhar fim de jogo
     if estado_jogo == OPCAO_FIM_JOGO:
