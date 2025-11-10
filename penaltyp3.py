@@ -3,6 +3,7 @@ import sys
 import random
 
 pygame.init()
+pygame.mixer.init()
 
 LARGURA, ALTURA = 1000, 700
 tela = pygame.display.set_mode((LARGURA, ALTURA))
@@ -80,6 +81,7 @@ def carregar_recursos():
     global goleiro_parado, goleiro_superior_esquerdo, goleiro_superior_direito
     global goleiro_inferior_esquerdo, goleiro_inferior_direito, goleiro_topo, goleiro_baixo
     global goleiro_superior_centro, goleiro_inferior_centro
+    global som_chute, som_gol, som_defesa
 
     try:
         imagem_fundo = pygame.image.load("bgpropostagpt.png")
@@ -110,6 +112,28 @@ def carregar_recursos():
 
         goleiro_inferior_centro = pygame.image.load("goaliemiddlebottom.png")
         goleiro_inferior_centro = pygame.transform.scale(goleiro_inferior_centro, (160, 150))
+
+        # Carregar sons
+        try:
+            som_chute = pygame.mixer.Sound("sombola(1).mp3")
+            som_chute.set_volume(0.7)
+        except:
+            print("Som 'sombola(1).mp3' não encontrado")
+            som_chute = None
+
+        try:
+            som_gol = pygame.mixer.Sound("somgol.mp3")
+            som_gol.set_volume(0.8)
+        except:
+            print("Som 'somgol.mp3' não encontrado")
+            som_gol = None
+
+        try:
+            som_defesa = pygame.mixer.Sound("defesasom.mp3")
+            som_defesa.set_volume(0.7)
+        except:
+            print("Som 'defesasom.mp3' não encontrado")
+            som_defesa = None
 
         print("Todos os recursos carregados com sucesso!")
         return True
@@ -327,6 +351,10 @@ while rodando:
                     escolha_goleiro = random.randint(0, 5)
                     estado_jogo = OPCAO_CHUTAR
 
+                    # Tocar som de chute
+                    if som_chute:
+                        som_chute.play()
+
                     # Iniciar animações
                     bola_animando = True
                     progresso_animacao_bola = 0
@@ -361,6 +389,14 @@ while rodando:
         if progresso_animacao_bola >= 1.0:
             progresso_animacao_bola = 1.0
             bola_animando = False
+            
+            # Tocar som de gol ou defesa quando a bola termina a animação
+            if escolha_jogador == escolha_goleiro:
+                if som_defesa:
+                    som_defesa.play()
+            else:
+                if som_gol:
+                    som_gol.play()
 
         t = progresso_animacao_bola
         inicio_x, inicio_y = LARGURA // 2, (ALTURA - 100) + AJUSTE_VERTICAL_GOL
