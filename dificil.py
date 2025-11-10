@@ -44,6 +44,10 @@ GOLEIRO_BASE_Y = 650 + AJUSTE_VERTICAL_GOL
 GOLEIRO_INFERIOR_THRESHOLD = 580 + AJUSTE_VERTICAL_GOL
 GOLEIRO_CHAO_Y = 600 + AJUSTE_VERTICAL_GOL
 
+carregando_potencia = False
+potencia_atual = 0
+potencia_maxima = 100
+
 # Animação da bola
 bola_x = LARGURA // 2
 bola_y = (ALTURA) + AJUSTE_VERTICAL_GOL + 120
@@ -256,6 +260,23 @@ def desenhar_resultado():
     tela.blit(s, ret_fundo.topleft)
     tela.blit(texto, ret_texto)
 
+def desenhar_barra_potencia():
+    if estado_jogo != OPCAO_ESCOLHER:
+        return
+
+    largura_barra = 300
+    altura_barra = 25
+    x = (LARGURA - largura_barra) // 2
+    y = ALTURA - 100
+
+    pygame.draw.rect(tela, BRANCO, (x, y, largura_barra, altura_barra), 3)
+
+    if carregando_potencia:
+        proporcao = potencia_atual / potencia_maxima
+        cor = (255 * proporcao, 255 * (1 - proporcao), 0)
+        pygame.draw.rect(tela, cor, (x + 3, y + 3, (largura_barra - 6) * proporcao, altura_barra - 6))
+
+
 def desenhar_fim_jogo():
     """Desenhar tela de fim de jogo"""
     fonte = pygame.font.Font(None, 90)
@@ -312,6 +333,11 @@ def resetar_jogo():
     progresso_animacao_goleiro = 0
     goleiro_no_chao = False
 
+    global carregando_potencia, potencia_atual, zona_clicada
+    carregando_potencia = False
+    potencia_atual = 0
+    zona_clicada = None
+
 # Loop principal do jogo
 rodando = True
 while rodando:
@@ -321,61 +347,99 @@ while rodando:
 
         if evento.type == pygame.MOUSEBUTTONDOWN and estado_jogo == OPCAO_ESCOLHER:
             pos_mouse = pygame.mouse.get_pos()
+            zona_clicada = None
+                # Verifica se o clique está dentro de algum círculo
+            for i, (cx, cy, raio) in enumerate(zonas_gol_circulos):
+                if ponto_dentro_circulo(pos_mouse[0], pos_mouse[1], cx, cy, raio):
+                    zona_clicada = i
+                    carregando_potencia = True
+                    potencia_atual = 0
+                    break
+            
+
+        if evento.type == pygame.MOUSEBUTTONUP and estado_jogo == OPCAO_ESCOLHER:
+            if not carregando_potencia:
+            # Nenhum carregamento ativo → ignora o clique
+                continue
+
+            carregando_potencia = False    
+            pos_mouse = pygame.mouse.get_pos()
+
+            # Garante que o jogador só chute se começou dentro de uma zona válida
+            if zona_clicada is None:
+                continue
+            pos_mouse = pygame.mouse.get_pos()
+            carregando_potencia = False
+
             for i, (cx, cy, raio) in enumerate(zonas_gol_circulos):
                 if ponto_dentro_circulo(pos_mouse[0], pos_mouse[1], cx, cy, raio):
                     escolha_jogador = i
-                    # Modo dificil então o goleiro tem 4 chances
-                    escolha_goleiro1 = random.randint(0, 5)
-                    escolha_goleiro2 = random.randint(0, 5)
-                    escolha_goleiro3 = random.randint(0, 5)
-                    escolha_goleiro4 = random.randint(0, 5)
+                    forca_chute = potencia_atual / potencia_maxima  # normaliza 0–1
+                    if forca_chute < 0.2:
+                        forca_chute = 0.2  # mínimo
+                    elif forca_chute > 1:
+                        forca_chute = 1
+
+            # Modo difícil: 4 chances de defesa
+            escolha_goleiro1 = random.randint(0, 5)
+            escolha_goleiro2 = random.randint(0, 5)
+            escolha_goleiro3 = random.randint(0, 5)
+            escolha_goleiro4 = random.randint(0, 5)
+
+            estado_jogo = OPCAO_CHUTAR
 
 
-                    estado_jogo = OPCAO_CHUTAR
+            # Define o ponto de destino da bola com base na zona clicada
+            bola_alvo_x = zonas_gol_circulos[escolha_jogador][0]
+            bola_alvo_y = zonas_gol_circulos[escolha_jogador][1]
 
-                    # Iniciar animações
-                    bola_animando = True
-                    progresso_animacao_bola = 0
-                    bola_alvo_x = cx
-                    bola_alvo_y = cy
+            # Iniciar animações
+            bola_animando = True
+            progresso_animacao_bola = 0
 
-                    goleiro_animando = True
-                    progresso_animacao_goleiro = 0
-                    
+            goleiro_animando = True
+            progresso_animacao_goleiro = 0
 
-                    temporizador_resultado = 180
+            temporizador_resultado = 180
 
-                    if escolha_jogador == escolha_goleiro1:
-                        escolha_goleiro = escolha_goleiro1
-                        pontuacao_goleiro += 1
-                        cor_flash = VERMELHO
+            # Probabilidade base de defesa (em 0 a 1)
+            prob_defesa_base = 0.66  # equivalente a 4 em 6 zonas
 
-                    elif escolha_jogador == escolha_goleiro2:
-                        escolha_goleiro = escolha_goleiro2
-                        pontuacao_goleiro += 1
-                        cor_flash = VERMELHO
-                    
-                    elif escolha_jogador == escolha_goleiro3:
-                        escolha_goleiro = escolha_goleiro3
-                        pontuacao_goleiro += 1
-                        cor_flash = VERMELHO
-                    
-                    elif escolha_jogador == escolha_goleiro4:
-                        escolha_goleiro = escolha_goleiro4
-                        pontuacao_goleiro += 1
-                        cor_flash = VERMELHO
+            # Reduz a chance de defesa proporcionalmente à força
+            # Chute fraco (0.2) → ~0.53 de chance
+            # Chute forte (1.0) → ~0.15 de chance
+            prob_defesa_real = prob_defesa_base * (1 - 0.7 * forca_chute)
 
-                    else:
-                        escolha_goleiro = escolha_goleiro4
-                        pontuacao_jogador += 1
-                        cor_flash = VERDE
-                        confete = criar_confete()
+            # Decide se o goleiro acerta com base nessa chance
+            defesa_ocorre = random.random() < prob_defesa_real
 
-                    goleiro_alvo_x = zonas_gol_circulos[escolha_goleiro][0]
-                    goleiro_alvo_y = zonas_gol_circulos[escolha_goleiro][1]
+            # Escolha do goleiro e pontuação
+            # --- Nova lógica de defesa com influência da força ---
+            prob_defesa_real = prob_defesa_base * (1 - 0.7 * forca_chute)
+            defesa_ocorre = random.random() < prob_defesa_real
 
-                    numero_rodada += 1
-                    estado_jogo = OPCAO_RESULTADO
+            if defesa_ocorre:
+                # Goleiro tenta adivinhar
+                escolha_goleiro = random.choice([escolha_goleiro1, escolha_goleiro2, escolha_goleiro3, escolha_goleiro4])
+                pontuacao_goleiro += 1
+                cor_flash = VERMELHO
+            else:
+                # Gol
+                escolha_goleiro = random.choice([escolha_goleiro1, escolha_goleiro2, escolha_goleiro3, escolha_goleiro4])
+                pontuacao_jogador += 1
+                if forca_chute > 0.8:
+                    tela_flash_timer = 5
+                    tela_flash_cor = (255, 255, 100)  # amarelado, simulando brilho do chute
+
+                cor_flash = VERDE
+                confete = criar_confete()
+
+            goleiro_alvo_x = zonas_gol_circulos[escolha_goleiro][0]
+            goleiro_alvo_y = zonas_gol_circulos[escolha_goleiro][1]
+            numero_rodada += 1
+            estado_jogo = OPCAO_RESULTADO
+            zona_clicada = None
+
 
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_SPACE and estado_jogo == OPCAO_FIM_JOGO:
@@ -383,16 +447,19 @@ while rodando:
 
     # Atualizar animação da bola
     if bola_animando:
-        progresso_animacao_bola += 0.06
+        velocidade_base = 0.03
+        fator_desacel = 0.8
+        progresso_animacao_bola += (velocidade_base * (1 + forca_chute)) * fator_desacel
         if progresso_animacao_bola >= 1.0:
             progresso_animacao_bola = 1.0
             bola_animando = False
 
         t = progresso_animacao_bola
         inicio_x, inicio_y = LARGURA // 2, (ALTURA - 100) + AJUSTE_VERTICAL_GOL
-        bola_x = inicio_x + (bola_alvo_x - inicio_x) * t
 
-        altura_arco = -150
+        # O arco do chute aumenta com a força
+        altura_arco = -150 * (0.7 + forca_chute * 1.2)
+        bola_x = inicio_x + (bola_alvo_x - inicio_x) * t
         bola_y = inicio_y + (bola_alvo_y - inicio_y) * t + altura_arco * (4 * t * (1 - t))
 
     # Atualizar animação do goleiro
@@ -458,6 +525,12 @@ while rodando:
         s_flash.fill((*cor_flash, 100))
         tela.blit(s_flash, (0, 0))
 
+
+    if carregando_potencia:
+        potencia_atual += 1.5
+    if potencia_atual > potencia_maxima:
+        potencia_atual = potencia_maxima
+
     # Desenhar gol
     if recursos_carregados:
         ret_gol = imagem_gol.get_rect(center=(LARGURA // 2, 620 + AJUSTE_VERTICAL_GOL * 0.8))
@@ -475,10 +548,19 @@ while rodando:
     # Desenhar interface
     desenhar_interface()
 
+    # Desenhar barra de potência
+    desenhar_barra_potencia()
+
     # Desenhar resultado
     if estado_jogo == OPCAO_RESULTADO and not bola_animando:
         desenhar_resultado()
         desenhar_confete()
+        if tela_flash_timer > 0:
+            tela_flash_timer -= 1
+            overlay = pygame.Surface((LARGURA, ALTURA))
+            overlay.fill(tela_flash_cor)
+            overlay.set_alpha(80)
+            tela.blit(overlay, (0, 0))
 
     # Desenhar fim de jogo
     if estado_jogo == OPCAO_FIM_JOGO:
