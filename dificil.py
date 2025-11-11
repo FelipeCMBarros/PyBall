@@ -48,6 +48,16 @@ carregando_potencia = False
 potencia_atual = 0
 potencia_maxima = 100
 
+# --- ADICIONADO: ping-pong para a força ---
+potencia_dir = 1  # 1 = aumentando, -1 = diminuindo
+
+# --- ADICIONADO: slider de direção ---
+carregando_direcao = False
+direcao_atual = 0.0         # varia entre -1 (esquerda) e 1 (direita)
+direcao_dir = 1             # direção do oscilador (-1 ou 1)
+direcao_velocidade = 0.02   # velocidade de oscilação
+direcao_max_offset = 80     # deslocamento máximo em pixels aplicado ao alvo
+
 # Animação da bola
 bola_x = LARGURA // 2
 bola_y = (ALTURA) + AJUSTE_VERTICAL_GOL + 120
@@ -234,7 +244,7 @@ def desenhar_interface():
     tela.blit(texto_rodada, ret_rodada)
 
     if estado_jogo == OPCAO_ESCOLHER:
-        texto_inst = fonte_pequena.render("Clique em um círculo para chutar!", True, BRANCO)
+        texto_inst = fonte_pequena.render("Clique e segure para carregar FORÇA. Solte para escolher DIREÇÃO. Clique novamente para chutar!", True, BRANCO)
         ret_inst = texto_inst.get_rect(center=(LARGURA // 2, ALTURA - 475))
         ret_fundo3 = pygame.Rect(ret_inst.left - 15, ret_inst.top - 5,
                                ret_inst.width + 30, ret_inst.height + 10)
@@ -273,9 +283,30 @@ def desenhar_barra_potencia():
 
     if carregando_potencia:
         proporcao = potencia_atual / potencia_maxima
-        cor = (255 * proporcao, 255 * (1 - proporcao), 0)
-        pygame.draw.rect(tela, cor, (x + 3, y + 3, (largura_barra - 6) * proporcao, altura_barra - 6))
+        cor = (min(255, int(255 * proporcao)), min(255, int(255 * (1 - proporcao))), 0)
+        pygame.draw.rect(tela, cor, (x + 3, y + 3, int((largura_barra - 6) * proporcao), altura_barra - 6))
 
+    # --- ADICIONADO: slider de direção abaixo da barra de potência ---
+    largura_dir = 260
+    altura_dir = 16
+    x_dir = (LARGURA - largura_dir) // 2
+    y_dir = y + altura_barra + 12
+
+    # fundo
+    pygame.draw.rect(tela, (50, 50, 50), (x_dir, y_dir, largura_dir, altura_dir), border_radius=6)
+    # linha central
+    meio_x = x_dir + largura_dir // 2
+    pygame.draw.line(tela, BRANCO, (meio_x, y_dir), (meio_x, y_dir + altura_dir), 2)
+
+    # marcador (direcao_atual varia -1..1 -> mapear para x)
+    marcador_x = int(x_dir + (direcao_atual + 1) / 2 * largura_dir)
+    marcador_y = y_dir + altura_dir // 2
+    pygame.draw.circle(tela, AMARELO if carregando_direcao else BRANCO, (marcador_x, marcador_y), 8)
+
+    # rótulo
+    fonte_peq = pygame.font.Font(None, 24)
+    texto_dir = fonte_peq.render("Direção", True, BRANCO)
+    tela.blit(texto_dir, (x_dir - 70, y_dir - 2))
 
 def desenhar_fim_jogo():
     """Desenhar tela de fim de jogo"""
@@ -312,6 +343,9 @@ def resetar_jogo():
     global escolha_jogador, escolha_goleiro, temporizador_resultado, confete
     global bola_x, bola_y, bola_animando, progresso_animacao_bola
     global goleiro_x, goleiro_y, goleiro_animando, progresso_animacao_goleiro, goleiro_no_chao
+    global carregando_potencia, potencia_atual, zona_clicada
+    # --- ADICIONADO: resetar variáveis de direção e ping-pong ---
+    global potencia_dir, carregando_direcao, direcao_atual, direcao_dir
 
     estado_jogo = OPCAO_ESCOLHER
     pontuacao_jogador = 0
@@ -333,113 +367,133 @@ def resetar_jogo():
     progresso_animacao_goleiro = 0
     goleiro_no_chao = False
 
-    global carregando_potencia, potencia_atual, zona_clicada
     carregando_potencia = False
     potencia_atual = 0
     zona_clicada = None
 
+    # ping-pong força
+    potencia_dir = 1
+
+    # direção
+    carregando_direcao = False
+    direcao_atual = 0.0
+    direcao_dir = 1
+
 # Loop principal do jogo
 rodando = True
+zona_clicada = None  # controla qual zona foi iniciada
 while rodando:
     for evento in pygame.event.get():
         if evento.type == pygame.QUIT:
             rodando = False
 
+        # --- FLUXO ADAPTADO: primeiro força, depois direção ---
         if evento.type == pygame.MOUSEBUTTONDOWN and estado_jogo == OPCAO_ESCOLHER:
             pos_mouse = pygame.mouse.get_pos()
-            zona_clicada = None
-                # Verifica se o clique está dentro de algum círculo
+
+            # Se já estivermos no modo seleção de direção, um clique confirma a direção e inicia o chute
+            if carregando_direcao:
+                # confirmar direção e executar chute
+                deslocamento_direcao = direcao_atual * direcao_max_offset
+
+                # Garante que o jogador só chute se tinha começado dentro de uma zona válida (zona_clicada armazenada)
+                if zona_clicada is None:
+                    carregando_direcao = False
+                    continue
+
+                escolha_jogador = zona_clicada
+                # calcula força baseada no que foi carregado antes
+                forca_chute = potencia_atual / potencia_maxima
+                if forca_chute < 0.2:
+                    forca_chute = 0.2
+                elif forca_chute > 1:
+                    forca_chute = 1
+
+                # Modo difícil: 4 chances de defesa
+                escolha_goleiro1 = random.randint(0, 5)
+                escolha_goleiro2 = random.randint(0, 5)
+                escolha_goleiro3 = random.randint(0, 5)
+                escolha_goleiro4 = random.randint(0, 5)
+
+                estado_jogo = OPCAO_CHUTAR
+
+                # Define o ponto de destino da bola com base na zona clicada e deslocamento de direção
+                BolaZoneX = zonas_gol_circulos[escolha_jogador][0]
+                bola_alvo_x = BolaZoneX + deslocamento_direcao
+                bola_alvo_y = zonas_gol_circulos[escolha_jogador][1]
+
+                # Iniciar animações
+                bola_animando = True
+                progresso_animacao_bola = 0
+
+                goleiro_animando = True
+                progresso_animacao_goleiro = 0
+
+                temporizador_resultado = 180
+
+                # Probabilidade base de defesa (em 0 a 1)
+                prob_defesa_base = 0.66  # equivalente a 4 em 6 zonas
+
+                # Reduz a chance de defesa proporcionalmente à força
+                prob_defesa_real = prob_defesa_base * (1 - 0.7 * forca_chute)
+
+                # Decide se o goleiro acerta com base nessa chance
+                defesa_ocorre = random.random() < prob_defesa_real
+
+                # Escolha do goleiro e pontuação
+                if defesa_ocorre:
+                    # Goleiro tenta adivinhar
+                    escolha_goleiro = random.choice([escolha_goleiro1, escolha_goleiro2, escolha_goleiro3, escolha_goleiro4])
+                    pontuacao_goleiro += 1
+                    cor_flash = VERMELHO
+                else:
+                    # Gol
+                    escolha_goleiro = random.choice([escolha_goleiro1, escolha_goleiro2, escolha_goleiro3, escolha_goleiro4])
+                    pontuacao_jogador += 1
+                    if forca_chute > 0.8:
+                        tela_flash_timer = 5
+                        tela_flash_cor = (255, 255, 100)  # amarelado, simulando brilho do chute
+
+                    cor_flash = VERDE
+                    confete = criar_confete()
+
+                goleiro_alvo_x = zonas_gol_circulos[escolha_goleiro][0]
+                goleiro_alvo_y = zonas_gol_circulos[escolha_goleiro][1]
+                numero_rodada += 1
+                estado_jogo = OPCAO_RESULTADO
+                zona_clicada = None
+                carregando_direcao = False
+                carregando_potencia = False
+
+                continue  # não iniciar novo carregamento aqui
+
+            # Se não estamos em seleção de direção: iniciar carregamento de potência (se clicar dentro de zona)
+            zona_clicada_temp = None
             for i, (cx, cy, raio) in enumerate(zonas_gol_circulos):
                 if ponto_dentro_circulo(pos_mouse[0], pos_mouse[1], cx, cy, raio):
-                    zona_clicada = i
-                    carregando_potencia = True
-                    potencia_atual = 0
+                    zona_clicada_temp = i
                     break
-            
 
+            if zona_clicada_temp is not None:
+                zona_clicada = zona_clicada_temp
+                carregando_potencia = True
+                potencia_atual = 0
+                potencia_dir = 1
+                # garantir que direção só inicie depois de soltar
+                carregando_direcao = False
+
+        # Quando soltar o mouse após carregar potência: entra modo seleção de direção
         if evento.type == pygame.MOUSEBUTTONUP and estado_jogo == OPCAO_ESCOLHER:
-            if not carregando_potencia:
-            # Nenhum carregamento ativo → ignora o clique
+            # Se estava carregando força, ao soltar passamos para seleção de direção (não chutamos ainda)
+            if carregando_potencia:
+                carregando_potencia = False
+                carregando_direcao = True
+                direcao_atual = 0.0
+                direcao_dir = 1
+                # manter zona_clicada para saber onde será o chute
                 continue
 
-            carregando_potencia = False    
-            pos_mouse = pygame.mouse.get_pos()
-
-            # Garante que o jogador só chute se começou dentro de uma zona válida
-            if zona_clicada is None:
-                continue
-            pos_mouse = pygame.mouse.get_pos()
-            carregando_potencia = False
-
-            for i, (cx, cy, raio) in enumerate(zonas_gol_circulos):
-                if ponto_dentro_circulo(pos_mouse[0], pos_mouse[1], cx, cy, raio):
-                    escolha_jogador = i
-                    forca_chute = potencia_atual / potencia_maxima  # normaliza 0–1
-                    if forca_chute < 0.2:
-                        forca_chute = 0.2  # mínimo
-                    elif forca_chute > 1:
-                        forca_chute = 1
-
-            # Modo difícil: 4 chances de defesa
-            escolha_goleiro1 = random.randint(0, 5)
-            escolha_goleiro2 = random.randint(0, 5)
-            escolha_goleiro3 = random.randint(0, 5)
-            escolha_goleiro4 = random.randint(0, 5)
-
-            estado_jogo = OPCAO_CHUTAR
-
-
-            # Define o ponto de destino da bola com base na zona clicada
-            bola_alvo_x = zonas_gol_circulos[escolha_jogador][0]
-            bola_alvo_y = zonas_gol_circulos[escolha_jogador][1]
-
-            # Iniciar animações
-            bola_animando = True
-            progresso_animacao_bola = 0
-
-            goleiro_animando = True
-            progresso_animacao_goleiro = 0
-
-            temporizador_resultado = 180
-
-            # Probabilidade base de defesa (em 0 a 1)
-            prob_defesa_base = 0.66  # equivalente a 4 em 6 zonas
-
-            # Reduz a chance de defesa proporcionalmente à força
-            # Chute fraco (0.2) → ~0.53 de chance
-            # Chute forte (1.0) → ~0.15 de chance
-            prob_defesa_real = prob_defesa_base * (1 - 0.7 * forca_chute)
-
-            # Decide se o goleiro acerta com base nessa chance
-            defesa_ocorre = random.random() < prob_defesa_real
-
-            # Escolha do goleiro e pontuação
-            # --- Nova lógica de defesa com influência da força ---
-            prob_defesa_real = prob_defesa_base * (1 - 0.7 * forca_chute)
-            defesa_ocorre = random.random() < prob_defesa_real
-
-            if defesa_ocorre:
-                # Goleiro tenta adivinhar
-                escolha_goleiro = random.choice([escolha_goleiro1, escolha_goleiro2, escolha_goleiro3, escolha_goleiro4])
-                pontuacao_goleiro += 1
-                cor_flash = VERMELHO
-            else:
-                # Gol
-                escolha_goleiro = random.choice([escolha_goleiro1, escolha_goleiro2, escolha_goleiro3, escolha_goleiro4])
-                pontuacao_jogador += 1
-                if forca_chute > 0.8:
-                    tela_flash_timer = 5
-                    tela_flash_cor = (255, 255, 100)  # amarelado, simulando brilho do chute
-
-                cor_flash = VERDE
-                confete = criar_confete()
-
-            goleiro_alvo_x = zonas_gol_circulos[escolha_goleiro][0]
-            goleiro_alvo_y = zonas_gol_circulos[escolha_goleiro][1]
-            numero_rodada += 1
-            estado_jogo = OPCAO_RESULTADO
-            zona_clicada = None
-
+            # Se não estava carregando_potencia, ignorar (o chute agora é confirmado por novo clique em MOUSEBUTTONDOWN)
 
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_SPACE and estado_jogo == OPCAO_FIM_JOGO:
@@ -526,8 +580,25 @@ while rodando:
         tela.blit(s_flash, (0, 0))
 
 
+    # --- ADICIONADO: atualização da direção enquanto no modo seleção de direção ---
+    if carregando_direcao:
+        direcao_atual += direcao_velocidade * direcao_dir
+        if direcao_atual >= 1.0:
+            direcao_atual = 1.0
+            direcao_dir = -1
+        elif direcao_atual <= -1.0:
+            direcao_atual = -1.0
+            direcao_dir = 1
+
+    # --- ADICIONADO: ping-pong da potência enquanto segurando ---
     if carregando_potencia:
-        potencia_atual += 1.5
+        potencia_atual += 1.5 * potencia_dir
+        if potencia_atual >= potencia_maxima:
+            potencia_atual = potencia_maxima
+            potencia_dir = -1
+        elif potencia_atual <= 0:
+            potencia_atual = 0
+            potencia_dir = 1
     if potencia_atual > potencia_maxima:
         potencia_atual = potencia_maxima
 
@@ -548,7 +619,7 @@ while rodando:
     # Desenhar interface
     desenhar_interface()
 
-    # Desenhar barra de potência
+    # Desenhar barra de potência e direção
     desenhar_barra_potencia()
 
     # Desenhar resultado
