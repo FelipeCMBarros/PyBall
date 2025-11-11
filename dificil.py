@@ -55,8 +55,13 @@ potencia_dir = 1  # 1 = aumentando, -1 = diminuindo
 carregando_direcao = False
 direcao_atual = 0.0         # varia entre -1 (esquerda) e 1 (direita)
 direcao_dir = 1             # direção do oscilador (-1 ou 1)
-direcao_velocidade = 0.02   # velocidade de oscilação
+# --- ALTERADO: direcao_velocidade agora será recalculada ao entrar no modo direção ---
+direcao_velocidade = 0.02   # valor inicial — será sobrescrito ao iniciar seleção de direção
 direcao_max_offset = 80     # deslocamento máximo em pixels aplicado ao alvo
+
+# --- ADICIONADO: parâmetros de velocidade mínima e máxima do slider (para escalar pela força) ---
+direcao_vel_min = 0.008
+direcao_vel_max = 0.06
 
 # Animação da bola
 bola_x = LARGURA // 2
@@ -345,7 +350,7 @@ def resetar_jogo():
     global goleiro_x, goleiro_y, goleiro_animando, progresso_animacao_goleiro, goleiro_no_chao
     global carregando_potencia, potencia_atual, zona_clicada
     # --- ADICIONADO: resetar variáveis de direção e ping-pong ---
-    global potencia_dir, carregando_direcao, direcao_atual, direcao_dir
+    global potencia_dir, carregando_direcao, direcao_atual, direcao_dir, direcao_velocidade
 
     estado_jogo = OPCAO_ESCOLHER
     pontuacao_jogador = 0
@@ -378,6 +383,7 @@ def resetar_jogo():
     carregando_direcao = False
     direcao_atual = 0.0
     direcao_dir = 1
+    direcao_velocidade = 0.02
 
 # Loop principal do jogo
 rodando = True
@@ -490,6 +496,12 @@ while rodando:
                 carregando_direcao = True
                 direcao_atual = 0.0
                 direcao_dir = 1
+
+                # --- ADICIONADO: ajustar velocidade do slider de direção com base na força carregada ---
+                proporcao_forca = potencia_atual / potencia_maxima
+                # mapeia proporcao_forca (0..1) para direcao_vel_min..direcao_vel_max
+                direcao_velocidade = direcao_vel_min + proporcao_forca * (direcao_vel_max - direcao_vel_min)
+
                 # manter zona_clicada para saber onde será o chute
                 continue
 
