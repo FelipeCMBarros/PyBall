@@ -249,7 +249,7 @@ def desenhar_interface():
     tela.blit(texto_rodada, ret_rodada)
 
     if estado_jogo == OPCAO_ESCOLHER:
-        texto_inst = fonte_pequena.render("Clique e segure para carregar FORÇA. Solte para escolher DIREÇÃO. Clique novamente para chutar!", True, BRANCO)
+        texto_inst = fonte_pequena.render("Segure para a FORÇA, clique para a DIREÇÃo e CHUTE!", True, BRANCO)
         ret_inst = texto_inst.get_rect(center=(LARGURA // 2, ALTURA - 475))
         ret_fundo3 = pygame.Rect(ret_inst.left - 15, ret_inst.top - 5,
                                ret_inst.width + 30, ret_inst.height + 10)
