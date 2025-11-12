@@ -6,6 +6,6 @@ Descrição - É um jogo de disputa de pênaltis desenvolvido em Python com Pyga
 
 Dependências - Esse jogo é dependente da biblioteca pygame do python. Para instalar, entre no link: https://www.pygame.org/download.shtml
 
-Para rodar o jogo basta rodar o script 'main.py' com Python e Pygame instalados.
+Para rodar o jogo basta rodar o script 'python main.py' com Python e Pygame instalados.
 
 Vídeo de demonstração do jogo:
