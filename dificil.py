@@ -2,11 +2,29 @@ import pygame
 import sys
 import random
 
+pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init()
+
 
 LARGURA, ALTURA = 1000, 700
 tela = pygame.display.set_mode((LARGURA, ALTURA))
-pygame.display.set_caption("PyBall - Modo difícil")
+pygame.display.set_caption("PyBall - Chute")
+
+
+
+# Funções para música
+def tocar_musica(caminho, loops=0, volume=1.0):
+    try:
+        pygame.mixer.music.load(caminho)
+        pygame.mixer.music.set_volume(volume)
+        pygame.mixer.music.play(loops)  # se loops=-1 = loop infinito
+    except Exception as e:
+        print(f"Erro ao tocar música '{caminho}': {e}")
+
+sfx_bola = 'Audio/sombola(1).mp3'
+sfx_gol = 'Audio/somgol(1).mp3'
+sfx_defesa = 'Audio/defesasom.mp3'
+
 
 # Cores
 BRANCO = (255, 255, 255)
@@ -447,15 +465,40 @@ while rodando:
                 defesa_ocorre = random.random() < prob_defesa_real
 
                 # Escolha do goleiro e pontuação
-                if defesa_ocorre:
+                if escolha_jogador == escolha_goleiro1:
                     # Goleiro tenta adivinhar
-                    escolha_goleiro = random.choice([escolha_goleiro1, escolha_goleiro2, escolha_goleiro3, escolha_goleiro4])
+                    escolha_goleiro = escolha_goleiro1
                     pontuacao_goleiro += 1
                     cor_flash = VERMELHO
+                    tocar_musica(sfx_defesa)
+
+                elif escolha_jogador == escolha_goleiro2:
+                    # Goleiro tenta adivinhar
+                    escolha_goleiro = escolha_goleiro2
+                    pontuacao_goleiro += 1
+                    cor_flash = VERMELHO
+                    tocar_musica(sfx_defesa)
+
+                elif escolha_jogador == escolha_goleiro3:
+                    # Goleiro tenta adivinhar
+                    escolha_goleiro = escolha_goleiro3
+                    pontuacao_goleiro += 1
+                    cor_flash = VERMELHO
+                    tocar_musica(sfx_defesa)
+
+                elif escolha_jogador == escolha_goleiro4:
+                    # Goleiro tenta adivinhar
+                    escolha_goleiro = escolha_goleiro4
+                    pontuacao_goleiro += 1
+                    cor_flash = VERMELHO
+                    tocar_musica(sfx_defesa)
+        
                 else:
                     # Gol
-                    escolha_goleiro = random.choice([escolha_goleiro1, escolha_goleiro2, escolha_goleiro3, escolha_goleiro4])
+                    escolha_goleiro = escolha_goleiro4
                     pontuacao_jogador += 1
+                    tocar_musica(sfx_gol)
+
                     if forca_chute > 0.8:
                         tela_flash_timer = 5
                         tela_flash_cor = (255, 255, 100)  # amarelado, simulando brilho do chute
