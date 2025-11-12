@@ -8,4 +8,4 @@ Dependências - Esse jogo é dependente da biblioteca pygame do python. Para ins
 
 Para rodar o jogo basta rodar o script 'python main.py' com Python e Pygame instalados.
 
-Vídeo de demonstração do jogo: https://drive.google.com/file/d/1YJYdIO1AUTvFGRS3X-p86toiKDlJUxJ_/view?usp=share_link
+Vídeo de demonstração do jogo: https://drive.google.com/file/d/1U7brq9Podzj85PB1k5Os-Eys1oYQfOmL/view?usp=sharing
