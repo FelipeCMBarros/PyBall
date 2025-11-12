@@ -282,20 +282,20 @@ def desenhar_barra_potencia():
 def desenhar_fim_jogo():
     fonte = pygame.font.Font(None, 90)
     fonte_pequena = pygame.font.Font(None, 40)
-    if pontuacao_jogador > pontuacao_goleiro:
-        texto_resultado = fonte.render("VOCÊ VENCEU!", True, VERDE)
-    elif pontuacao_goleiro > pontuacao_jogador:
-        texto_resultado = fonte.render("VOCÊ PERDEU!", True, VERMELHO)
-    else:
-        texto_resultado = fonte.render("EMPATE!", True, AMARELO)
+    # mostrar número de rodadas alcançadas em vez de 'você venceu/perdeu'
+    texto_resultado = fonte.render(f"rodadas: {numero_rodada}", True, BRANCO)
     ret_resultado = texto_resultado.get_rect(center=(LARGURA // 2, ALTURA // 2))
     ret_fundo = pygame.Rect(ret_resultado.left - 30, ret_resultado.top - 20, ret_resultado.width + 60, ret_resultado.height + 40)
     s = pygame.Surface((ret_fundo.width, ret_fundo.height), pygame.SRCALPHA)
     s.fill((0, 0, 0, 220))
     tela.blit(s, ret_fundo.topleft)
     tela.blit(texto_resultado, ret_resultado)
+    # mostrar placar abaixo (opcional)
+    texto_placar = fonte_pequena.render(f"você {pontuacao_jogador} - {pontuacao_goleiro} goleiro", True, BRANCO)
+    ret_placar = texto_placar.get_rect(center=(LARGURA // 2, ALTURA // 2 + 70))
+    tela.blit(texto_placar, ret_placar)
     texto_reiniciar = fonte_pequena.render("Pressione ESPAÇO para jogar novamente", True, BRANCO)
-    ret_reiniciar = texto_reiniciar.get_rect(center=(LARGURA // 2, ALTURA // 2 + 80))
+    ret_reiniciar = texto_reiniciar.get_rect(center=(LARGURA // 2, ALTURA // 2 + 120))
     ret_fundo2 = pygame.Rect(ret_reiniciar.left - 20, ret_reiniciar.top - 10, ret_reiniciar.width + 40, ret_reiniciar.height + 20)
     s2 = pygame.Surface((ret_fundo2.width, ret_fundo2.height), pygame.SRCALPHA)
     s2.fill((0, 0, 0, 220))
