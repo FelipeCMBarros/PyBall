@@ -2,13 +2,16 @@ import pygame
 import sys
 import random
 
+# inicialização do áudio e pygame
 pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init()
 
+# configurações iniciais da tela
 LARGURA, ALTURA = 1000, 700
 tela = pygame.display.set_mode((LARGURA, ALTURA))
 pygame.display.set_caption("PyBall - Chute")
 
+# função para tocar música
 def tocar_musica(caminho, loops=0, volume=1.0):
     try:
         pygame.mixer.music.load(caminho)
@@ -17,11 +20,13 @@ def tocar_musica(caminho, loops=0, volume=1.0):
     except Exception as e:
         print(f"Erro ao tocar música '{caminho}': {e}")
 
+# caminhos e variáveis de som
 sfx_bola = 'Audio/sombola(1).mp3'
 sfx_bola_obj = None
 sfx_gol = 'Audio/somgol(1).mp3'
 sfx_defesa = 'Audio/defesasom.mp3'
 
+# cores
 BRANCO = (255, 255, 255)
 PRETO = (0, 0, 0)
 VERDE = (50, 200, 50)
@@ -29,14 +34,17 @@ VERMELHO = (200, 50, 50)
 CINZA = (100, 100, 100)
 AMARELO = (255, 255, 0)
 
+# controle de fps
 relogio = pygame.time.Clock()
 FPS = 60
 
+# estados do jogo
 OPCAO_ESCOLHER = "escolher"
 OPCAO_CHUTAR = "chutar"
 OPCAO_RESULTADO = "resultado"
 OPCAO_FIM_JOGO = "fim_jogo"
 
+# variáveis iniciais do jogo
 estado_jogo = OPCAO_ESCOLHER
 pontuacao_jogador = 0
 pontuacao_goleiro = 0
@@ -46,11 +54,15 @@ escolha_jogador = None
 escolha_goleiro = None
 temporizador_resultado = 0
 cor_flash = None
+
+# configurações do goleiro e bola
 GOLEIRO_OFFSET_FIM = 60
 AJUSTE_VERTICAL_GOL = -165
 GOLEIRO_BASE_Y = 650 + AJUSTE_VERTICAL_GOL
 GOLEIRO_INFERIOR_THRESHOLD = 580 + AJUSTE_VERTICAL_GOL
 GOLEIRO_CHAO_Y = 600 + AJUSTE_VERTICAL_GOL
+
+# variáveis da barra de potência e direção
 carregando_potencia = False
 potencia_atual = 0
 potencia_maxima = 100
@@ -62,12 +74,15 @@ direcao_velocidade = 0.02
 direcao_max_offset = 80
 direcao_vel_min = 0.008
 direcao_vel_max = 0.06
+
+# posições da bola e goleiro
 bola_x = LARGURA // 2
 bola_y = (ALTURA) + AJUSTE_VERTICAL_GOL + 120
 bola_alvo_x = LARGURA // 2
 bola_alvo_y = ALTURA // 2
 bola_animando = False
 progresso_animacao_bola = 0
+
 goleiro_x = LARGURA // 2
 goleiro_y = GOLEIRO_BASE_Y
 goleiro_alvo_x = LARGURA // 2
@@ -76,6 +91,8 @@ goleiro_animando = False
 progresso_animacao_goleiro = 0
 goleiro_no_chao = False
 confete = []
+
+# zonas de chute no gol
 zonas_gol_circulos = [
     (280, 500 + AJUSTE_VERTICAL_GOL, 25),
     (730, 500 + AJUSTE_VERTICAL_GOL, 25),
@@ -85,6 +102,7 @@ zonas_gol_circulos = [
     (505, 660 + AJUSTE_VERTICAL_GOL, 25)
 ]
 
+# carrega imagens e sons
 def carregar_recursos():
     global imagem_fundo, imagem_gol, imagem_bola
     global goleiro_parado, goleiro_superior_esquerdo, goleiro_superior_direito
@@ -120,8 +138,10 @@ def carregar_recursos():
         print("Certifique-se de que todos os arquivos de imagem estão na mesma pasta do arquivo .py")
         return False
 
+# verifica se os recursos foram carregados
 recursos_carregados = carregar_recursos()
 
+# gera partículas de confete
 def criar_confete():
     particulas = []
     for _ in range(60):
@@ -133,6 +153,7 @@ def criar_confete():
         particulas.append([x, y, cor, velocidade, tamanho])
     return particulas
 
+# atualiza posição do confete
 def atualizar_confete():
     global confete
     novo_confete = []
@@ -142,14 +163,17 @@ def atualizar_confete():
             novo_confete.append(particula)
     confete = novo_confete
 
+# desenha confete
 def desenhar_confete():
     for particula in confete:
         pygame.draw.circle(tela, particula[2], (int(particula[0]), int(particula[1])), particula[4])
 
+# verifica se ponto está dentro de círculo
 def ponto_dentro_circulo(px, py, cx, cy, raio):
     distancia = ((px - cx) ** 2 + (py - cy) ** 2) ** 0.5
     return distancia <= raio
 
+# desenha zonas de chute
 def desenhar_zonas_gol():
     for i, (cx, cy, raio) in enumerate(zonas_gol_circulos):
         if estado_jogo == OPCAO_ESCOLHER:
@@ -165,6 +189,7 @@ def desenhar_zonas_gol():
             if i == escolha_jogador:
                 pygame.draw.circle(tela, VERDE, (cx, cy), raio, 6)
 
+# desenha goleiro
 def desenhar_goleiro():
     if not recursos_carregados:
         pygame.draw.rect(tela, (255, 140, 0), (int(goleiro_x - 30), int(goleiro_y - 60), 60, 120))
@@ -189,6 +214,7 @@ def desenhar_goleiro():
     ret = sprite.get_rect(center=(int(goleiro_x), int(goleiro_y)))
     tela.blit(sprite, ret)
 
+# desenha bola
 def desenhar_bola():
     if not recursos_carregados:
         pygame.draw.circle(tela, BRANCO, (int(bola_x), int(bola_y)), 20)
@@ -196,6 +222,7 @@ def desenhar_bola():
     ret = imagem_bola.get_rect(center=(int(bola_x), int(bola_y)))
     tela.blit(imagem_bola, ret)
 
+# interface principal
 def desenhar_interface():
     fonte = pygame.font.Font(None, 56)
     fonte_pequena = pygame.font.Font(None, 36)
@@ -221,8 +248,8 @@ def desenhar_interface():
         s3.fill((0, 0, 0, 180))
         tela.blit(s3, ret_fundo3.topleft)
         tela.blit(texto_inst, ret_inst)
-
 def desenhar_resultado():
+    # exibe texto do resultado (gol ou defesa)
     fonte = pygame.font.Font(None, 80)
     if escolha_jogador == escolha_goleiro:
         texto = fonte.render("DEFENDEU!", True, VERMELHO)
@@ -236,6 +263,7 @@ def desenhar_resultado():
     tela.blit(texto, ret_texto)
 
 def desenhar_barra_potencia():
+    # desenha barra de força e controle de direção
     if estado_jogo != OPCAO_ESCOLHER:
         return
     largura_barra = 300
@@ -262,6 +290,7 @@ def desenhar_barra_potencia():
     tela.blit(texto_dir, (x_dir - 70, y_dir - 2))
 
 def desenhar_fim_jogo():
+    # mostra tela final com resultado geral
     fonte = pygame.font.Font(None, 90)
     fonte_pequena = pygame.font.Font(None, 40)
     if pontuacao_jogador > pontuacao_goleiro:
@@ -285,6 +314,7 @@ def desenhar_fim_jogo():
     tela.blit(texto_reiniciar, ret_reiniciar)
 
 def resetar_jogo():
+    # reinicia variáveis do jogo para começar de novo
     global estado_jogo, pontuacao_jogador, pontuacao_goleiro, numero_rodada
     global escolha_jogador, escolha_goleiro, temporizador_resultado, confete
     global bola_x, bola_y, bola_animando, progresso_animacao_bola
@@ -320,13 +350,16 @@ def resetar_jogo():
 rodando = True
 zona_clicada = None
 
+# loop principal do jogo
 while rodando:
     for evento in pygame.event.get():
+        # trata eventos do pygame (fechar, mouse, teclado)
         if evento.type == pygame.QUIT:
             rodando = False
         if evento.type == pygame.MOUSEBUTTONDOWN and estado_jogo == OPCAO_ESCOLHER:
             pos_mouse = pygame.mouse.get_pos()
             if carregando_direcao:
+                # ao clicar durante a seleção de direção, realiza o chute
                 deslocamento_direcao = direcao_atual * direcao_max_offset
                 if zona_clicada is None:
                     carregando_direcao = False
@@ -400,12 +433,14 @@ while rodando:
                     zona_clicada_temp = i
                     break
             if zona_clicada_temp is not None:
+                # inicia carregamento de potência ao clicar em uma zona válida
                 zona_clicada = zona_clicada_temp
                 carregando_potencia = True
                 potencia_atual = 0
                 potencia_dir = 1
                 carregando_direcao = False
         if evento.type == pygame.MOUSEBUTTONUP and estado_jogo == OPCAO_ESCOLHER:
+            # soltar mouse inicia a seleção de direção
             if carregando_potencia:
                 carregando_potencia = False
                 carregando_direcao = True
@@ -415,10 +450,12 @@ while rodando:
                 direcao_velocidade = direcao_vel_min + proporcao_forca * (direcao_vel_max - direcao_vel_min)
                 continue
         if evento.type == pygame.KEYDOWN:
+            # espaço reinicia quando fim do jogo
             if evento.key == pygame.K_SPACE and estado_jogo == OPCAO_FIM_JOGO:
                 resetar_jogo()
 
     if bola_animando:
+        # atualiza animação da bola em voo
         velocidade_base = 0.03
         fator_desacel = 0.8
         progresso_animacao_bola += (velocidade_base * (1 + forca_chute)) * fator_desacel
@@ -432,6 +469,7 @@ while rodando:
         bola_y = inicio_y + (bola_alvo_y - inicio_y) * t + altura_arco * (4 * t * (1 - t))
 
     if goleiro_animando:
+        # atualiza animação do goleiro durante a defesa
         progresso_animacao_goleiro += 0.08
         if progresso_animacao_goleiro >= 1.0:
             progresso_animacao_goleiro = 1.0
@@ -459,6 +497,7 @@ while rodando:
         goleiro_y = inicio_y + (chao_y - inicio_y) * t + altura_arco * (4 * t * (1 - t))
 
     if estado_jogo == OPCAO_RESULTADO:
+        # temporiza exibição do resultado e atualiza confete
         temporizador_resultado -= 1
         atualizar_confete()
         if temporizador_resultado <= 0:
@@ -475,16 +514,20 @@ while rodando:
                 goleiro_no_chao = False
 
     if recursos_carregados:
+        # desenha fundo com imagem se disponível
         tela.blit(imagem_fundo, (0, 0))
     else:
+        # fundo simples se recursos não carregados
         tela.fill((0, 100, 0))
 
     if estado_jogo == OPCAO_RESULTADO and cor_flash and temporizador_resultado > 150:
+        # efeito de flash colorido ao mostrar resultado
         s_flash = pygame.Surface((LARGURA, ALTURA), pygame.SRCALPHA)
         s_flash.fill((*cor_flash, 100))
         tela.blit(s_flash, (0, 0))
 
     if carregando_direcao:
+        # atualiza indicador de direção oscilante
         direcao_atual += direcao_velocidade * direcao_dir
         if direcao_atual >= 1.0:
             direcao_atual = 1.0
@@ -493,6 +536,7 @@ while rodando:
             direcao_atual = -1.0
             direcao_dir = 1
     if carregando_potencia:
+        # atualiza barra de potência pulsante
         potencia_atual += 1.5 * potencia_dir
         if potencia_atual >= potencia_maxima:
             potencia_atual = potencia_maxima
@@ -504,9 +548,11 @@ while rodando:
             potencia_atual = potencia_maxima
 
     if recursos_carregados:
+        # desenha imagem do gol por cima do fundo
         ret_gol = imagem_gol.get_rect(center=(LARGURA // 2, 620 + AJUSTE_VERTICAL_GOL * 0.8))
         tela.blit(imagem_gol, ret_gol)
 
+    # desenha elementos principais da cena
     desenhar_zonas_gol()
     desenhar_goleiro()
     desenhar_bola()
@@ -520,6 +566,6 @@ while rodando:
     pygame.display.flip()
     relogio.tick(FPS)
 
+# encerra pygame ao sair
 pygame.quit()
 sys.exit()
-
