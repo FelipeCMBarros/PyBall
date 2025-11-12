@@ -42,6 +42,12 @@ pontuacao_jogador = 0
 pontuacao_goleiro = 0
 numero_rodada = 0
 rodadas_maximas = 5
+# número de erros que encerra a sequência (infinito até errar N vezes)
+erros_permitidos = 3
+
+# dificuldade dinâmica (base)
+base_potencia_speed = 3.5
+base_min_defesa = 0.3
 escolha_jogador = None
 escolha_goleiro = None
 temporizador_resultado = 0
@@ -206,20 +212,24 @@ def desenhar_bola():
 def desenhar_interface():
     fonte = pygame.font.Font(None, 56)
     fonte_pequena = pygame.font.Font(None, 36)
-    texto_pontuacao = fonte.render(f"VOCÊ {pontuacao_jogador} - {pontuacao_goleiro} GOLEIRO", True, BRANCO)
-    ret_pontuacao = texto_pontuacao.get_rect(center=(LARGURA // 2, 40))
-    ret_fundo = pygame.Rect(ret_pontuacao.left - 20, ret_pontuacao.top - 10, ret_pontuacao.width + 40, ret_pontuacao.height + 20)
-    s = pygame.Surface((ret_fundo.width, ret_fundo.height), pygame.SRCALPHA)
+    # mostra a rodada no topo
+    texto_rodada_top = fonte.render(f"Rodada: {numero_rodada}", True, BRANCO)
+    ret_rodada_top = texto_rodada_top.get_rect(center=(LARGURA // 2, 40))
+    ret_bg_top = pygame.Rect(ret_rodada_top.left - 20, ret_rodada_top.top - 10, ret_rodada_top.width + 40, ret_rodada_top.height + 20)
+    s = pygame.Surface((ret_bg_top.width, ret_bg_top.height), pygame.SRCALPHA)
     s.fill((0, 0, 0, 150))
-    tela.blit(s, ret_fundo.topleft)
-    tela.blit(texto_pontuacao, ret_pontuacao)
-    texto_rodada = fonte_pequena.render(f"Rodada {numero_rodada}/{rodadas_maximas}", True, BRANCO)
-    ret_rodada = texto_rodada.get_rect(center=(LARGURA // 2, 90))
-    ret_fundo2 = pygame.Rect(ret_rodada.left - 15, ret_rodada.top - 5, ret_rodada.width + 30, ret_rodada.height + 10)
-    s2 = pygame.Surface((ret_fundo2.width, ret_fundo2.height), pygame.SRCALPHA)
+    tela.blit(s, ret_bg_top.topleft)
+    tela.blit(texto_rodada_top, ret_rodada_top)
+
+    # mostra erros restantes abaixo
+    erros_restantes = max(0, erros_permitidos - pontuacao_goleiro)
+    texto_erros = fonte_pequena.render(f"Erros Restantes: {erros_restantes}", True, BRANCO)
+    ret_erros = texto_erros.get_rect(center=(LARGURA // 2, 90))
+    ret_bg_erros = pygame.Rect(ret_erros.left - 15, ret_erros.top - 5, ret_erros.width + 30, ret_erros.height + 10)
+    s2 = pygame.Surface((ret_bg_erros.width, ret_bg_erros.height), pygame.SRCALPHA)
     s2.fill((0, 0, 0, 150))
-    tela.blit(s2, ret_fundo2.topleft)
-    tela.blit(texto_rodada, ret_rodada)
+    tela.blit(s2, ret_bg_erros.topleft)
+    tela.blit(texto_erros, ret_erros)
     if estado_jogo == OPCAO_ESCOLHER:
         texto_inst = fonte_pequena.render("Segure para a FORÇA, clique para a DIREÇÃo e CHUTE!", True, BRANCO)
         ret_inst = texto_inst.get_rect(center=(LARGURA // 2, ALTURA - 475))
@@ -325,6 +335,9 @@ def resetar_jogo():
     direcao_dir = 1
     direcao_velocidade = 0.02
 
+    # reset dinamico de dificuldade (mantém configs base)
+    # (base_potencia_speed e base_min_defesa permanecem)
+
 rodando = True
 zona_clicada = None
 
@@ -356,8 +369,9 @@ while rodando:
                     print(f"Erro ao tocar sfx_bola: {e}")
                 
                 # calcula a chance de defesa baseada na força do chute
-                # fórmula simples: chance de defesa = 1 - forca, com mínimo de 30%
-                prob_defesa_real = max(0.3, 1 - forca_chute)
+                # fórmula simples: chance = 1 - forca, com mínimo que aumenta conforme o jogo avança
+                min_defesa = min(0.6, base_min_defesa + (numero_rodada // 5) * 0.05)
+                prob_defesa_real = max(min_defesa, 1 - forca_chute)
                 
                 # Escolhe a zona de defesa do goleiro com probabilidade baseada em força
                 if random.random() < prob_defesa_real:
@@ -472,7 +486,8 @@ while rodando:
         temporizador_resultado -= 1
         atualizar_confete()
         if temporizador_resultado <= 0:
-            if numero_rodada >= rodadas_maximas:
+            # termina quando o goleiro marcar erros_permitidos vezes
+            if pontuacao_goleiro >= erros_permitidos:
                 estado_jogo = OPCAO_FIM_JOGO
             else:
                 estado_jogo = OPCAO_ESCOLHER
@@ -508,7 +523,13 @@ while rodando:
             direcao_dir = 1
     if carregando_potencia:
         # barra de potência que sobe e desce continuamente
-        potencia_atual += 3.5 * potencia_dir
+        # começa a aumentar a partir da rodada 3, de forma gradual a cada rodada
+        if numero_rodada > 2:
+            incremento = (numero_rodada - 2) * 0.25  # +0.25 por rodada a partir da 3
+        else:
+            incremento = 0
+        potencia_vel = min(6.0, base_potencia_speed + incremento)
+        potencia_atual += potencia_vel * potencia_dir
         if potencia_atual >= potencia_maxima:
             potencia_atual = potencia_maxima
             potencia_dir = -1
