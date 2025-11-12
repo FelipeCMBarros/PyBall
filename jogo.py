@@ -390,7 +390,7 @@ while rodando:
                 goleiro_animando = True
                 progresso_animacao_goleiro = 0
                 temporizador_resultado = 180
-                prob_defesa_base = 0.66
+                prob_defesa_base = 0.3
                 prob_defesa_real = prob_defesa_base * (1 - 0.7 * forca_chute)
                 defesa_ocorre = random.random() < prob_defesa_real
                 if escolha_jogador == escolha_goleiro1:
